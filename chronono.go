@@ -113,6 +113,24 @@ var homeTemplate = template.Must(template.New("").Parse(`
 		text-align: center;
 		
 	}
+
+	.button {
+		background-color: #005581;
+		color: white;
+		border: 2px solid #555555;
+		padding: 15px 32px;
+		text-align: center;
+		text-decoration: none;
+		display: inline-block;
+		font-size: 16px;
+		margin: 20px 10px;
+		cursor: pointer;
+	}
+	
+	.button:hover {
+		background-color: rgb(137, 208, 230);
+		color: black;
+	}
 	
 </style>
 	
@@ -127,7 +145,7 @@ var homeTemplate = template.Must(template.New("").Parse(`
 			<circle class="progress__value" cx="120" cy="120" r="108" stroke-width="24" id="hours_value"/>
 			<text transform="rotate(90, 12, 70)" font-family="Helvetica" font-size="120" id="hours_text">00</text>
 		</svg>
-		<br/><h3>Heures</h3>
+		<br/><h3>Hours</h3>
 		<input id="hours_control" type="range" min="0" max="12" value="0" />
 	</div>
 
@@ -149,9 +167,15 @@ var homeTemplate = template.Must(template.New("").Parse(`
 			<circle class="progress__value" cx="120" cy="120" r="108" stroke-width="24" id="seconds_value"/>
 			<text transform="rotate(90, 12, 70)" font-family="Helvetica" font-size="120" id="seconds_text">00</text>
 		</svg>
-		<br/><h3>Secondes</h3>
+		<br/><h3>Seconds</h3>
 		<input id="seconds_control" type="range" min="0" max="59" value="0" />
 	</div>
+
+</div>
+<div class="clock">
+
+	<input id="start" type="button" class="button" value="start" />
+	<input id="stop"  type="button" class="button" value="stop" />
 
 </div>
 	
@@ -181,10 +205,6 @@ var homeTemplate = template.Must(template.New("").Parse(`
 		control_value.style.strokeDashoffset = CIRCUMFERENCE;
 	}
 	
-	registerControl('hours');
-	registerControl('minutes');
-	registerControl('seconds');
-
 	function initWs(url) {
 		ws = new WebSocket(url);
 		if (!ws)
@@ -211,6 +231,21 @@ var homeTemplate = template.Must(template.New("").Parse(`
 
 	if (initWs("{{.WSLocation}}")) {
 		console.log("Websocket initialized");
+
+		document.getElementById("start").onclick = function (evt) {
+			if (ws)
+				ws.send("start");
+		}
+	
+		document.getElementById("stop").onclick = function (evt) {
+			if (ws)
+				ws.send("stop");
+		}
+
+		registerControl('hours');
+		registerControl('minutes');
+		registerControl('seconds');
+	
 	} else {
 		showError("Websocket error");
 	}
