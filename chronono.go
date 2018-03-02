@@ -30,7 +30,15 @@ func GetLocalIP() string {
 	return ""
 }
 
+func makeTimestamp() int64 {
+	return time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
+}
+
 var upgrader = websocket.Upgrader{} // use default options
+var startedJob clock.Job
+var startTime int64
+var localIP = GetLocalIP()
+var offset int64
 
 func echo(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
@@ -48,25 +56,24 @@ func echo(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Printf("recv: %s", message)
 		s := string(message)
-		if strings.HasPrefix(s, "time=") {
-			s = strings.TrimPrefix(s, "time=")
-			i, err := strconv.Atoi(s)
+		if s == "clear" {
+			offset = 0
+			log.Print("Clear defaults")
+		} else if strings.HasPrefix(s, "start=") {
+			s = strings.TrimPrefix(s, "start=")
+			i, err := strconv.ParseInt(s, 10, 64)
 			if err != nil {
 				log.Println("Convert error :", err)
 				break
 			}
 			offset = i
-			log.Printf("Set offset to %d", offset)
-		} else if s == "clear" {
-			offset = 0
-			log.Print("Clear defaults")
-		} else if s == "start" {
 			start()
 		} else if s == "stop" {
 			stop()
 		}
 
-		err = c.WriteMessage(mt, message)
+		var ss = []byte(strconv.Itoa(int((makeTimestamp() - startTime + offset*1000) / 1000)))
+		err = c.WriteMessage(mt, ss)
 		if err != nil {
 			log.Println("write:", err)
 			break
@@ -76,10 +83,9 @@ func echo(w http.ResponseWriter, r *http.Request) {
 }
 
 func broadcastTime() {
-	log.Print("broadcast")
+	var delta = (makeTimestamp() - startTime + offset*1000) / 1000
+	log.Printf("broadcast %d", delta)
 }
-
-var startedJob clock.Job
 
 func start() {
 	var myClock = clock.NewClock()
@@ -88,9 +94,9 @@ func start() {
 		log.Println("failure")
 	}
 	log.Printf("Starting timer with offset : %d", offset)
+	startTime = makeTimestamp()
 	//job.C()
 	startedJob = job
-
 }
 
 func stop() {
@@ -110,10 +116,6 @@ func home(w http.ResponseWriter, r *http.Request) {
 	}
 	homeTemplate.Execute(w, data)
 }
-
-var localIP = GetLocalIP()
-
-var offset = 0
 
 func main() {
 
@@ -330,11 +332,16 @@ input[type=range] {
 	var ws;
 	var hours = 0, minutes = 0, seconds = 0;
 
-	function setControlValue(name, value, strokeDashoffset) {
+	function setControlValue(name, value) {
 		var control = document.getElementById(name + '_control');
 		var control_value = document.getElementById(name + '_value');
 		var control_text_value = document.getElementById(name + '_text');
-		control_value.style.strokeDashoffset = strokeDashoffset;
+
+		var max = parseInt(control.max) + 1;
+		var progress = value / max;
+		var dashoffset = CIRCUMFERENCE * (1 - progress);
+			
+		control_value.style.strokeDashoffset = dashoffset;
 		control_text_value.textContent = ('0' + value).slice(-2);
 		control.value = value;
 		if (name == 'hours')
@@ -350,13 +357,7 @@ input[type=range] {
 		var control_value = document.getElementById(name + '_value');
 		
 		control.addEventListener('input', function(event) {
-			var value = event.target.valueAsNumber;
-			var max = parseInt(control.max) + 1;
-			var progress = value / max;
-			var dashoffset = CIRCUMFERENCE * (1 - progress);
-			setControlValue(name, value, dashoffset);
-			if (ws)
-				ws.send("time=" + (hours*3600+minutes*60+seconds));
+			setControlValue(name, event.target.valueAsNumber);
 		});
 		control_value.style.strokeDasharray = CIRCUMFERENCE;
 		control_value.style.strokeDashoffset = CIRCUMFERENCE;
@@ -372,12 +373,13 @@ input[type=range] {
 		ws.onclose = function(evt) {
 			console.log("CLOSE");
 			ws = null;
+			showError("Server lost");
 		}
 		ws.onmessage = function(evt) {
 			console.log("RESPONSE: " + evt.data);
 		}
 		ws.onerror = function(evt) {
-			console.log("ERROR: " + evt.data);
+			showError("ERROR: " + evt.data);
 		}
 		return true;
 	}
@@ -386,12 +388,19 @@ input[type=range] {
 		document.getElementById("info").innerHTML = "<font color='red'>" + title + "</font>";
 	}
 
+	function setTime(time) {
+		var h = Math.floor(time / 3600);
+		setControlValue('hours', h);
+		setControlValue('minutes', Math.floor((time - h) / 60));
+		setControlValue('seconds', time % 60);
+	}
+
 	if (initWs("{{.WSLocation}}")) {
 		console.log("Websocket initialized");
 
 		document.getElementById("start").onclick = function (evt) {
 			if (ws)
-				ws.send("start");
+				ws.send("start="+(hours*3600+minutes*60+seconds));
 		}
 	
 		document.getElementById("stop").onclick = function (evt) {
@@ -402,9 +411,7 @@ input[type=range] {
 		document.getElementById("clear").onclick = function (evt) {
 			if (ws)
 				ws.send("clear");
-			setControlValue('hours', 0, CIRCUMFERENCE);
-			setControlValue('minutes', 0, CIRCUMFERENCE);
-			setControlValue('seconds', 0, CIRCUMFERENCE);
+			setTime(0);
 		}
 
 		registerControl('hours');
