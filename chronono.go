@@ -71,12 +71,13 @@ func main() {
 	_ = port
 	flag.Parse()
 
-	log.Printf("Serving on http://%s\n", localIP+":"+*port)
-
 	http.HandleFunc("/echo", echo)
 	http.HandleFunc("/", home)
-	log.Fatal(http.ListenAndServe(localIP+":"+*port, nil))
-
+	go func() {
+		log.Printf("Serving on http://%s\n", localIP+":"+*port)
+		log.Fatal(http.ListenAndServe(localIP+":"+*port, nil))
+	}()
+	select {}
 }
 
 var homeTemplate = template.Must(template.New("").Parse(`
