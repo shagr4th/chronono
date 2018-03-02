@@ -7,6 +7,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"strconv"
+	"strings"
 )
 
 // GetLocalIP returns the non loopback local IP of the host
@@ -43,6 +45,45 @@ func echo(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		log.Printf("recv: %s", message)
+		s := string(message)
+		if strings.HasPrefix(s, "hours=") {
+			s = strings.TrimPrefix(s, "hours=")
+			i, err := strconv.Atoi(s)
+			if err != nil {
+				log.Println("Convert error :", err)
+				break
+			}
+			hours = i
+			log.Printf("Set hours to %d", hours)
+		} else if strings.HasPrefix(s, "minutes=") {
+			s = strings.TrimPrefix(s, "minutes=")
+			i, err := strconv.Atoi(s)
+			if err != nil {
+				log.Println("Convert error :", err)
+				break
+			}
+			minutes = i
+			log.Printf("Set minutes to %d", minutes)
+		} else if strings.HasPrefix(s, "seconds=") {
+			s = strings.TrimPrefix(s, "seconds=")
+			i, err := strconv.Atoi(s)
+			if err != nil {
+				log.Println("Convert error :", err)
+				break
+			}
+			seconds = i
+			log.Printf("Set seconds to %d", seconds)
+		} else if s == "clear" {
+			hours = 0
+			minutes = 0
+			seconds = 0
+			log.Print("Clear defaults")
+		} else if s == "start" {
+
+		} else if s == "stop" {
+
+		}
+
 		err = c.WriteMessage(mt, message)
 		if err != nil {
 			log.Println("write:", err)
@@ -64,6 +105,10 @@ func home(w http.ResponseWriter, r *http.Request) {
 }
 
 var localIP = GetLocalIP()
+
+var hours = 0
+var minutes = 0
+var seconds = 0
 
 func main() {
 
@@ -146,7 +191,7 @@ var homeTemplate = template.Must(template.New("").Parse(`
 			<text transform="rotate(90, 12, 70)" font-family="Helvetica" font-size="120" id="hours_text">00</text>
 		</svg>
 		<br/><h3>Hours</h3>
-		<input id="hours_control" type="range" min="0" max="12" value="0" />
+		<input id="hours_control" type="range" min="0" max="11" value="0" />
 	</div>
 
 	<div class="clockdiv">
@@ -174,8 +219,9 @@ var homeTemplate = template.Must(template.New("").Parse(`
 </div>
 <div class="clock">
 
-	<input id="start" type="button" class="button" value="start" />
-	<input id="stop"  type="button" class="button" value="stop" />
+	<input id="start" type="button" class="button" value="Start" />
+	<input id="stop"  type="button" class="button" value="Stop" />
+	<input id="clear" type="button" class="button" value="Clear" />
 
 </div>
 	
@@ -240,6 +286,11 @@ var homeTemplate = template.Must(template.New("").Parse(`
 		document.getElementById("stop").onclick = function (evt) {
 			if (ws)
 				ws.send("stop");
+		}
+
+		document.getElementById("clear").onclick = function (evt) {
+			if (ws)
+				ws.send("clear");
 		}
 
 		registerControl('hours');
