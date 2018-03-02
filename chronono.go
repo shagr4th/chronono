@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"github.com/alex023/clock"
 	"github.com/gorilla/websocket"
 	"html/template"
 	"log"
@@ -9,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // GetLocalIP returns the non loopback local IP of the host
@@ -53,10 +55,10 @@ func echo(w http.ResponseWriter, r *http.Request) {
 				log.Println("Convert error :", err)
 				break
 			}
-			time = i
-			log.Printf("Set time to %d", time)
+			offset = i
+			log.Printf("Set offset to %d", offset)
 		} else if s == "clear" {
-			time = 0
+			offset = 0
 			log.Print("Clear defaults")
 		} else if s == "start" {
 			start()
@@ -73,12 +75,29 @@ func echo(w http.ResponseWriter, r *http.Request) {
 	log.Printf("Closed connection: %s", r.Host)
 }
 
+func broadcastTime() {
+	log.Print("broadcast")
+}
+
+var startedJob clock.Job
+
 func start() {
-	log.Printf("Starting timer with offset : %d", time)
+	var myClock = clock.NewClock()
+	job, inserted := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, broadcastTime)
+	if !inserted {
+		log.Println("failure")
+	}
+	log.Printf("Starting timer with offset : %d", offset)
+	//job.C()
+	startedJob = job
+
 }
 
 func stop() {
-	log.Printf("Stopping timer")
+	if startedJob != nil {
+		log.Printf("Stopping timer")
+		startedJob.Cancel()
+	}
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
@@ -94,7 +113,7 @@ func home(w http.ResponseWriter, r *http.Request) {
 
 var localIP = GetLocalIP()
 
-var time = 0
+var offset = 0
 
 func main() {
 
@@ -310,26 +329,32 @@ input[type=range] {
 	var CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 	var ws;
 	var hours = 0, minutes = 0, seconds = 0;
+
+	function setControlValue(name, value, strokeDashoffset) {
+		var control = document.getElementById(name + '_control');
+		var control_value = document.getElementById(name + '_value');
+		var control_text_value = document.getElementById(name + '_text');
+		control_value.style.strokeDashoffset = strokeDashoffset;
+		control_text_value.textContent = ('0' + value).slice(-2);
+		control.value = value;
+		if (name == 'hours')
+			hours = value;
+		if (name == 'minutes')
+			minutes = value;
+		if (name == 'seconds')
+			seconds = value;
+	}
 	
 	function registerControl(name) {
 		var control = document.getElementById(name + '_control');
 		var control_value = document.getElementById(name + '_value');
-		var control_text_value = document.getElementById(name + '_text');
 		
 		control.addEventListener('input', function(event) {
 			var value = event.target.valueAsNumber;
 			var max = parseInt(control.max) + 1;
 			var progress = value / max;
 			var dashoffset = CIRCUMFERENCE * (1 - progress);
-					
-			control_value.style.strokeDashoffset = dashoffset;
-			control_text_value.textContent = ('0' + value).slice(-2);
-			if (name == 'hours')
-				hours = value;
-			if (name == 'minutes')
-				minutes = value;
-			if (name == 'seconds')
-				seconds = value;
+			setControlValue(name, value, dashoffset);
 			if (ws)
 				ws.send("time=" + (hours*3600+minutes*60+seconds));
 		});
@@ -377,6 +402,9 @@ input[type=range] {
 		document.getElementById("clear").onclick = function (evt) {
 			if (ws)
 				ws.send("clear");
+			setControlValue('hours', 0, CIRCUMFERENCE);
+			setControlValue('minutes', 0, CIRCUMFERENCE);
+			setControlValue('seconds', 0, CIRCUMFERENCE);
 		}
 
 		registerControl('hours');
