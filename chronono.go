@@ -156,7 +156,10 @@ var homeTemplate = template.Must(template.New("").Parse(`
 	.clockdiv{
 		display: inline-block;
 		text-align: center;
-		
+	}
+
+	.control {
+		width: 200px
 	}
 
 	.button {
@@ -191,7 +194,7 @@ var homeTemplate = template.Must(template.New("").Parse(`
 			<text transform="rotate(90, 12, 70)" font-family="Helvetica" font-size="120" id="hours_text">00</text>
 		</svg>
 		<br/><h3>Hours</h3>
-		<input id="hours_control" type="range" min="0" max="11" value="0" />
+		<input id="hours_control" class="control" type="range" min="0" max="11" value="0" />
 	</div>
 
 	<div class="clockdiv">
@@ -202,7 +205,7 @@ var homeTemplate = template.Must(template.New("").Parse(`
 			<text transform="rotate(90, 12, 70)" font-family="Helvetica" font-size="120" id="minutes_text">00</text>
 		</svg>
 		<br/><h3>Minutes</h3>
-		<input id="minutes_control" type="range" min="0" max="59" value="0" />
+		<input id="minutes_control" class="control" type="range" min="0" max="59" value="0" />
 	</div>
 
 	<div class="clockdiv">
@@ -213,7 +216,7 @@ var homeTemplate = template.Must(template.New("").Parse(`
 			<text transform="rotate(90, 12, 70)" font-family="Helvetica" font-size="120" id="seconds_text">00</text>
 		</svg>
 		<br/><h3>Seconds</h3>
-		<input id="seconds_control" type="range" min="0" max="59" value="0" />
+		<input id="seconds_control" class="control" type="range" min="0" max="59" value="0" />
 	</div>
 
 </div>
