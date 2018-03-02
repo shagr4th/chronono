@@ -48,8 +48,24 @@ func echo(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("New connection: %s", r.Host)
 	defer c.Close()
+	var myClock = clock.NewClock()
+	job, inserted := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
+		var delta int64 = -1
+		if startTime > 0 {
+			delta = makeTimestamp() - startTime + offset*1000
+		}
+		var ss = []byte(strconv.Itoa(int(delta)))
+		err = c.WriteMessage(websocket.TextMessage, ss)
+		if err != nil {
+			log.Println("write:", err)
+		}
+	})
+	if !inserted {
+		log.Println("failure")
+	}
+	defer job.Cancel()
 	for {
-		mt, message, err := c.ReadMessage()
+		_, message, err := c.ReadMessage()
 		if err != nil {
 			log.Println("read:", err)
 			break
@@ -72,38 +88,16 @@ func echo(w http.ResponseWriter, r *http.Request) {
 			stop()
 		}
 
-		var ss = []byte(strconv.Itoa(int((makeTimestamp() - startTime + offset*1000) / 1000)))
-		err = c.WriteMessage(mt, ss)
-		if err != nil {
-			log.Println("write:", err)
-			break
-		}
 	}
 	log.Printf("Closed connection: %s", r.Host)
 }
 
-func broadcastTime() {
-	var delta = (makeTimestamp() - startTime + offset*1000) / 1000
-	log.Printf("broadcast %d", delta)
-}
-
 func start() {
-	var myClock = clock.NewClock()
-	job, inserted := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, broadcastTime)
-	if !inserted {
-		log.Println("failure")
-	}
-	log.Printf("Starting timer with offset : %d", offset)
 	startTime = makeTimestamp()
-	//job.C()
-	startedJob = job
 }
 
 func stop() {
-	if startedJob != nil {
-		log.Printf("Stopping timer")
-		startedJob.Cancel()
-	}
+	startTime = 0
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
@@ -342,7 +336,7 @@ input[type=range] {
 		var dashoffset = CIRCUMFERENCE * (1 - progress);
 			
 		control_value.style.strokeDashoffset = dashoffset;
-		control_text_value.textContent = ('0' + value).slice(-2);
+		control_text_value.textContent = ('0' + Math.floor(value)).slice(-2);
 		control.value = value;
 		if (name == 'hours')
 			hours = value;
@@ -376,7 +370,9 @@ input[type=range] {
 			showError("Server lost");
 		}
 		ws.onmessage = function(evt) {
-			console.log("RESPONSE: " + evt.data);
+			var timeInMs = parseInt(evt.data);
+			if (timeInMs >= 0)
+				setTime(timeInMs/1000);
 		}
 		ws.onerror = function(evt) {
 			showError("ERROR: " + evt.data);
