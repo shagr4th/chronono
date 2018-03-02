@@ -46,42 +46,22 @@ func echo(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Printf("recv: %s", message)
 		s := string(message)
-		if strings.HasPrefix(s, "hours=") {
-			s = strings.TrimPrefix(s, "hours=")
+		if strings.HasPrefix(s, "time=") {
+			s = strings.TrimPrefix(s, "time=")
 			i, err := strconv.Atoi(s)
 			if err != nil {
 				log.Println("Convert error :", err)
 				break
 			}
-			hours = i
-			log.Printf("Set hours to %d", hours)
-		} else if strings.HasPrefix(s, "minutes=") {
-			s = strings.TrimPrefix(s, "minutes=")
-			i, err := strconv.Atoi(s)
-			if err != nil {
-				log.Println("Convert error :", err)
-				break
-			}
-			minutes = i
-			log.Printf("Set minutes to %d", minutes)
-		} else if strings.HasPrefix(s, "seconds=") {
-			s = strings.TrimPrefix(s, "seconds=")
-			i, err := strconv.Atoi(s)
-			if err != nil {
-				log.Println("Convert error :", err)
-				break
-			}
-			seconds = i
-			log.Printf("Set seconds to %d", seconds)
+			time = i
+			log.Printf("Set time to %d", time)
 		} else if s == "clear" {
-			hours = 0
-			minutes = 0
-			seconds = 0
+			time = 0
 			log.Print("Clear defaults")
 		} else if s == "start" {
-
+			start()
 		} else if s == "stop" {
-
+			stop()
 		}
 
 		err = c.WriteMessage(mt, message)
@@ -91,6 +71,14 @@ func echo(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	log.Printf("Closed connection: %s", r.Host)
+}
+
+func start() {
+	log.Printf("Starting timer with offset : %d", time)
+}
+
+func stop() {
+	log.Printf("Stopping timer")
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
@@ -106,9 +94,7 @@ func home(w http.ResponseWriter, r *http.Request) {
 
 var localIP = GetLocalIP()
 
-var hours = 0
-var minutes = 0
-var seconds = 0
+var time = 0
 
 func main() {
 
@@ -233,6 +219,7 @@ var homeTemplate = template.Must(template.New("").Parse(`
 	var RADIUS = 108;
 	var CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 	var ws;
+	var hours = 0, minutes = 0, seconds = 0;
 	
 	function registerControl(name) {
 		var control = document.getElementById(name + '_control');
@@ -247,8 +234,14 @@ var homeTemplate = template.Must(template.New("").Parse(`
 					
 			control_value.style.strokeDashoffset = dashoffset;
 			control_text_value.textContent = ('0' + value).slice(-2);
+			if (name == 'hours')
+				hours = value;
+			if (name == 'minutes')
+				minutes = value;
+			if (name == 'seconds')
+				seconds = value;
 			if (ws)
-				ws.send(name + "=" + value);
+				ws.send("time=" + (hours*3600+minutes*60+seconds));
 		});
 		control_value.style.strokeDasharray = CIRCUMFERENCE;
 		control_value.style.strokeDashoffset = CIRCUMFERENCE;
