@@ -4,6 +4,7 @@ import (
 	"flag"
 	"github.com/alex023/clock"
 	"github.com/gorilla/websocket"
+	"github.com/thestk/rtmidi/contrib/go/rtmidi"
 	"html/template"
 	"log"
 	"net"
@@ -35,10 +36,10 @@ func makeTimestamp() int64 {
 }
 
 var upgrader = websocket.Upgrader{} // use default options
-var startedJob clock.Job
 var startTime int64
 var localIP = GetLocalIP()
 var offset int64
+var myClock = clock.NewClock()
 
 func echo(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
@@ -48,7 +49,6 @@ func echo(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Printf("New connection: %s", r.Host)
 	defer c.Close()
-	var myClock = clock.NewClock()
 	job, inserted := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
 		var delta int64 = -1
 		if startTime > 0 {
@@ -57,7 +57,7 @@ func echo(w http.ResponseWriter, r *http.Request) {
 		var ss = []byte(strconv.Itoa(int(delta)))
 		err = c.WriteMessage(websocket.TextMessage, ss)
 		if err != nil {
-			log.Println("write:", err)
+			log.Println("Websocket client write error :", err)
 		}
 	})
 	if !inserted {
@@ -67,10 +67,9 @@ func echo(w http.ResponseWriter, r *http.Request) {
 	for {
 		_, message, err := c.ReadMessage()
 		if err != nil {
-			log.Println("read:", err)
+			log.Println("Websocket client read error : ", err)
 			break
 		}
-		log.Printf("recv: %s", message)
 		s := string(message)
 		if s == "clear" {
 			offset = 0
@@ -93,11 +92,17 @@ func echo(w http.ResponseWriter, r *http.Request) {
 }
 
 func start() {
-	startTime = makeTimestamp()
+	if startTime == 0 {
+		startTime = makeTimestamp()
+		log.Print("Clock started")
+	}
 }
 
 func stop() {
-	startTime = 0
+	if startTime > 0 {
+		startTime = 0
+		log.Print("Clock stopped")
+	}
 }
 
 func home(w http.ResponseWriter, r *http.Request) {
@@ -109,6 +114,59 @@ func home(w http.ResponseWriter, r *http.Request) {
 		HTTPLocation: "http://" + r.Host,
 	}
 	homeTemplate.Execute(w, data)
+}
+
+func midiEventScan(deviceName string, portNumber int) {
+	log.Printf("Listening to Midi device : %s\n", deviceName)
+	midiDeviceInput, err := rtmidi.NewMIDIInDefault()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	defer midiDeviceInput.Destroy()
+	if err := midiDeviceInput.OpenPort(portNumber, "RtMidi"); err != nil {
+		log.Fatal(err)
+		log.Printf("Disconnected MIDI Device %s", deviceName)
+	}
+	defer midiDeviceInput.Close()
+
+	for {
+		m, t, err := midiDeviceInput.Message()
+		if len(m) > 0 && m[0] != 224 {
+			log.Println(deviceName, m, t, err)
+			if m[0] == 128 && m[1] == 36 {
+				log.Print("Received C1 on MIDI Channel 1")
+				start()
+			}
+		}
+	}
+
+}
+
+func midiDevicesScan() {
+	midiInput, err := rtmidi.NewMIDIInDefault()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	portCount, err := midiInput.PortCount()
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for i := 0; i < portCount; i++ {
+		inp, err := midiInput.PortName(i)
+
+		//_ = err
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		go midiEventScan(inp, i)
+	}
+
+	defer midiInput.Close()
+
 }
 
 func main() {
@@ -123,6 +181,7 @@ func main() {
 		log.Printf("Serving on http://%s\n", localIP+":"+*port)
 		log.Fatal(http.ListenAndServe(localIP+":"+*port, nil))
 	}()
+	midiDevicesScan()
 	select {}
 }
 
