@@ -120,13 +120,16 @@ func midiEventScan(deviceName string, portNumber int) {
 	log.Printf("Listening to Midi device : %s\n", deviceName)
 	midiDeviceInput, err := rtmidi.NewMIDIInDefault()
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return
 	}
 
 	defer midiDeviceInput.Destroy()
 	if err := midiDeviceInput.OpenPort(portNumber, "RtMidi"); err != nil {
-		log.Fatal(err)
+		log.Print(err)
 		log.Printf("Disconnected MIDI Device %s", deviceName)
+		delete(midiActiveDevices, deviceName)
+		return
 	}
 	defer midiDeviceInput.Close()
 
@@ -147,29 +150,38 @@ func midiEventScan(deviceName string, portNumber int) {
 
 }
 
-func midiDevicesScan() {
-	midiInput, err := rtmidi.NewMIDIInDefault()
-	if err != nil {
-		log.Fatal(err)
-	}
+var midiActiveDevices = make(map[string]int)
+
+// http://midi.teragonaudio.com/tech/midispec.htm
+
+func midiDevicesScan(midiInput rtmidi.MIDIIn) {
 
 	portCount, err := midiInput.PortCount()
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
+		return
 	}
 
 	for i := 0; i < portCount; i++ {
 		inp, err := midiInput.PortName(i)
-
-		//_ = err
 		if err != nil {
-			log.Fatal(err)
+			log.Print(err)
+			continue
 		}
 
+		_, ok := midiActiveDevices[inp]
+		if ok {
+			continue
+		}
+
+		log.Printf("Found new Midi device : %s (%d)\n", inp, i)
+		midiActiveDevices[inp] = i
 		go midiEventScan(inp, i)
 	}
 
-	defer midiInput.Close()
+	time.Sleep(time.Duration(10 * time.Second))
+
+	midiDevicesScan(midiInput)
 
 }
 
@@ -185,7 +197,13 @@ func main() {
 		log.Printf("Serving on http://%s\n", localIP+":"+*port)
 		log.Fatal(http.ListenAndServe(localIP+":"+*port, nil))
 	}()
-	midiDevicesScan()
+	midiDefaultInput, err := rtmidi.NewMIDIInDefault()
+	defer midiDefaultInput.Close()
+	if err != nil {
+		log.Print(err)
+	} else {
+		go midiDevicesScan(midiDefaultInput)
+	}
 	select {}
 }
 
