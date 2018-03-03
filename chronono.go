@@ -307,7 +307,7 @@ var homeTemplate = template.Must(template.New("").Parse(`
 	function setTime(time) {
 		var h = Math.floor(time / 3600);
 		setControlValue('hours', h);
-		setControlValue('minutes', Math.floor((time - h) / 60));
+		setControlValue('minutes', Math.floor((time - h * 3600) / 60));
 		setControlValue('seconds', time % 60);
 	}
 
