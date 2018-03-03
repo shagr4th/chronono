@@ -47,7 +47,7 @@ func echo(w http.ResponseWriter, r *http.Request) {
 		log.Print("upgrade:", err)
 		return
 	}
-	log.Printf("New connection: %s", r.Host)
+	log.Printf("New connection: %s", r.RemoteAddr)
 	defer c.Close()
 	job, inserted := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
 		var delta int64 = -1
@@ -88,7 +88,7 @@ func echo(w http.ResponseWriter, r *http.Request) {
 		}
 
 	}
-	log.Printf("Closed connection: %s", r.Host)
+	log.Printf("Closed connection: %s", r.RemoteAddr)
 }
 
 func start() {
@@ -136,6 +136,10 @@ func midiEventScan(deviceName string, portNumber int) {
 			log.Println(deviceName, m, t, err)
 			if m[0] == 128 && m[1] == 36 {
 				log.Print("Received C1 on MIDI Channel 1")
+				start()
+			}
+			if m[0] == 127 {
+				log.Print("Received 127")
 				start()
 			}
 		}
