@@ -129,94 +129,9 @@ func main() {
 var homeTemplate = template.Must(template.New("").Parse(`
 <style>
 
-input[type=range] {
-	height: 25px;
-	-webkit-appearance: none;
-	margin: 10px 0;
-	width: 100%;
-  }
-  input[type=range]:focus {
-	outline: none;
-  }
-  input[type=range]::-webkit-slider-runnable-track {
-	width: 100%;
-	height: 5px;
-	cursor: pointer;
-	animate: 0.2s;
-	box-shadow: 0px 0px 0px #000000;
-	background: #2497E3;
-	border-radius: 1px;
-	border: 0px solid #000000;
-  }
-  input[type=range]::-webkit-slider-thumb {
-	box-shadow: 0px 0px 0px #000000;
-	border: 1px solid #2497E3;
-	height: 18px;
-	width: 18px;
-	border-radius: 25px;
-	background: #A1D0FF;
-	cursor: pointer;
-	-webkit-appearance: none;
-	margin-top: -7px;
-  }
-  input[type=range]:focus::-webkit-slider-runnable-track {
-	background: #2497E3;
-  }
-  input[type=range]::-moz-range-track {
-	width: 100%;
-	height: 5px;
-	cursor: pointer;
-	animate: 0.2s;
-	box-shadow: 0px 0px 0px #000000;
-	background: #2497E3;
-	border-radius: 1px;
-	border: 0px solid #000000;
-  }
-  input[type=range]::-moz-range-thumb {
-	box-shadow: 0px 0px 0px #000000;
-	border: 1px solid #2497E3;
-	height: 18px;
-	width: 18px;
-	border-radius: 25px;
-	background: #A1D0FF;
-	cursor: pointer;
-  }
-  input[type=range]::-ms-track {
-	width: 100%;
-	height: 5px;
-	cursor: pointer;
-	animate: 0.2s;
-	background: transparent;
-	border-color: transparent;
-	color: transparent;
-  }
-  input[type=range]::-ms-fill-lower {
-	background: #2497E3;
-	border: 0px solid #000000;
-	border-radius: 2px;
-	box-shadow: 0px 0px 0px #000000;
-  }
-  input[type=range]::-ms-fill-upper {
-	background: #2497E3;
-	border: 0px solid #000000;
-	border-radius: 2px;
-	box-shadow: 0px 0px 0px #000000;
-  }
-  input[type=range]::-ms-thumb {
-	margin-top: 1px;
-	box-shadow: 0px 0px 0px #000000;
-	border: 1px solid #2497E3;
-	height: 18px;
-	width: 18px;
-	border-radius: 25px;
-	background: #A1D0FF;
-	cursor: pointer;
-  }
-  input[type=range]:focus::-ms-fill-lower {
-	background: #2497E3;
-  }
-  input[type=range]:focus::-ms-fill-upper {
-	background: #2497E3;
+  body {
+	  background: black;
+	  color: gray;
   }
   
 	.progress {
@@ -229,11 +144,11 @@ input[type=range] {
 	}
 	
 	.progress__meter {
-		stroke: #e6e6e6;
+		stroke: #606060;
 	}
 	
 	.progress__value {
-		stroke: #f77a52;
+		stroke: #46b8da;
 		stroke-linecap: round;
 	}
 	
@@ -254,9 +169,9 @@ input[type=range] {
 	}
 
 	.button {
-		background-color: #005581;
-		color: white;
-		border: 2px solid #555555;
+		background-color: #46b8da;
+		color: black;
+		border: 2px solid #A0A0A0;
 		padding: 15px 32px;
 		text-align: center;
 		text-decoration: none;
@@ -267,8 +182,13 @@ input[type=range] {
 	}
 	
 	.button:hover {
-		background-color: rgb(137, 208, 230);
-		color: black;
+		background-color: #86d0e7;
+		color: white;
+	}
+
+	h1 {
+		text-shadow: 0 0 10px #46b8da;
+		font-size: 60px;
 	}
 	
 </style>
@@ -282,7 +202,7 @@ input[type=range] {
 		<svg class="progress" width="240" height="240" viewBox="0 0 240 240">
 			<circle class="progress__meter" cx="120" cy="120" r="108" stroke-width="24" />
 			<circle class="progress__value" cx="120" cy="120" r="108" stroke-width="24" id="hours_value"/>
-			<text transform="rotate(90, 12, 70)" font-family="Helvetica" font-size="120" id="hours_text">00</text>
+			<text transform="rotate(90, 12, 70)" font-family="Helvetica" font-size="120" fill="#808080" id="hours_text">00</text>
 		</svg>
 		<br/><h3>Hours</h3>
 		<input id="hours_control" class="control" type="range" min="0" max="11" value="0" />
@@ -293,7 +213,7 @@ input[type=range] {
 		<svg class="progress" width="240" height="240" viewBox="0 0 240 240">
 			<circle class="progress__meter" cx="120" cy="120" r="108" stroke-width="24" />
 			<circle class="progress__value" cx="120" cy="120" r="108" stroke-width="24" id="minutes_value"/>
-			<text transform="rotate(90, 12, 70)" font-family="Helvetica" font-size="120" id="minutes_text">00</text>
+			<text transform="rotate(90, 12, 70)" font-family="Helvetica" font-size="120" fill="#808080" id="minutes_text">00</text>
 		</svg>
 		<br/><h3>Minutes</h3>
 		<input id="minutes_control" class="control" type="range" min="0" max="59" value="0" />
@@ -304,7 +224,7 @@ input[type=range] {
 		<svg class="progress" width="240" height="240" viewBox="0 0 240 240">
 			<circle class="progress__meter" cx="120" cy="120" r="108" stroke-width="24" />
 			<circle class="progress__value" cx="120" cy="120" r="108" stroke-width="24" id="seconds_value"/>
-			<text transform="rotate(90, 12, 70)" font-family="Helvetica" font-size="120" id="seconds_text">00</text>
+			<text transform="rotate(90, 12, 70)" font-family="Helvetica" font-size="120" fill="#808080" id="seconds_text">00</text>
 		</svg>
 		<br/><h3>Seconds</h3>
 		<input id="seconds_control" class="control" type="range" min="0" max="59" value="0" />
@@ -396,7 +316,7 @@ input[type=range] {
 
 		document.getElementById("start").onclick = function (evt) {
 			if (ws)
-				ws.send("start="+(hours*3600+minutes*60+seconds));
+				ws.send("start="+Math.floor(hours*3600+minutes*60+seconds));
 		}
 	
 		document.getElementById("stop").onclick = function (evt) {
