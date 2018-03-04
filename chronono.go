@@ -328,34 +328,107 @@ var homeTemplate = template.Must(template.New("").Parse(`
 	<h2 class="title">chronono</h2>
 	<div class="clockdiv">
 		 
-		<svg class="progress" width="240" height="240" viewBox="0 0 240 240">
-			<circle class="progress__meter" cx="120" cy="120" r="108" stroke-width="24" />
-			<circle class="progress__value" cx="120" cy="120" r="108" stroke-width="24" id="hours_value"/>
-			<text transform="rotate(90, 19, 55)" font-family="Courier" font-size="140" fill="#808080" id="hours_text">00</text>
+		<svg class="progress" width="280" height="280" viewBox="0 0 280 280">
+			<defs>
+
+				<filter id="sofGlow" height="300%" width="300%" x="-75%" y="-75%">
+					<!-- Thicken out the original shape -->
+					<feMorphology operator="dilate" radius="4" in="SourceAlpha" result="thicken" />
+
+					<!-- Use a gaussian blur to create the soft blurriness of the glow -->
+					<feGaussianBlur in="thicken" stdDeviation="10" result="blurred" />
+
+					<!-- Change the colour -->
+					<feFlood flood-color="rgb(0,0,0)" result="glowColor" />
+
+					<!-- Color in the glows -->
+					<feComposite in="glowColor" in2="blurred" operator="in" result="softGlow_colored" />
+
+					<!--	Layer the effects together -->
+					<feMerge>
+						<feMergeNode in="softGlow_colored"/>
+						<feMergeNode in="SourceGraphic"/>
+					</feMerge>
+
+				</filter>
+
+			</defs>
+			<circle class="progress__meter" cx="140" cy="140" r="108" stroke-width="24" filter="url(#sofGlow)"/>
+			<circle class="progress__value" cx="140" cy="140" r="108" stroke-width="24" filter="url(#sofGlow)" id="hours_value"/>
+			<text x="60" y="-95" transform="rotate(90, 0, 0)" font-family="Courier" font-size="140" letter-spacing="-10" fill="#A0A0A0" id="hours_text">00</text>
 		</svg>
-		<br/><h3>Hours</h3>
+		<br/>
 		<input id="hours_control" class="control" type="range" min="0" max="11" value="0" />
 	</div>
 
 	<div class="clockdiv">
 		
-		<svg class="progress" width="240" height="240" viewBox="0 0 240 240">
-			<circle class="progress__meter" cx="120" cy="120" r="108" stroke-width="24" />
-			<circle class="progress__value" cx="120" cy="120" r="108" stroke-width="24" id="minutes_value"/>
-			<text transform="rotate(90, 19, 55)" font-family="Courier" font-size="140" fill="#808080" id="minutes_text">00</text>
+		<svg class="progress" width="280" height="280" viewBox="0 0 280 280">
+			<defs>
+
+				<filter id="sofGlow" height="300%" width="300%" x="-75%" y="-75%">
+					<!-- Thicken out the original shape -->
+					<feMorphology operator="dilate" radius="4" in="SourceAlpha" result="thicken" />
+
+					<!-- Use a gaussian blur to create the soft blurriness of the glow -->
+					<feGaussianBlur in="thicken" stdDeviation="10" result="blurred" />
+
+					<!-- Change the colour -->
+					<feFlood flood-color="rgb(0,0,0)" result="glowColor" />
+
+					<!-- Color in the glows -->
+					<feComposite in="glowColor" in2="blurred" operator="in" result="softGlow_colored" />
+
+					<!--	Layer the effects together -->
+					<feMerge>
+						<feMergeNode in="softGlow_colored"/>
+						<feMergeNode in="SourceGraphic"/>
+					</feMerge>
+
+				</filter>
+
+			</defs>
+			<circle class="progress__meter" cx="140" cy="140" r="108" stroke-width="24" filter="url(#sofGlow)"/>
+			<circle class="progress__value" cx="140" cy="140" r="108" stroke-width="24" filter="url(#sofGlow)" id="minutes_value"/>
+			<text x="60" y="-95" transform="rotate(90, 0, 0)" font-family="Courier" font-size="140" letter-spacing="-10" fill="#A0A0A0" id="minutes_text">00</text>
 		</svg>
-		<br/><h3>Minutes</h3>
+		<br/>
 		<input id="minutes_control" class="control" type="range" min="0" max="59" value="0" />
 	</div>
 
 	<div class="clockdiv">
 		
-		<svg class="progress" width="240" height="240" viewBox="0 0 240 240">
-			<circle class="progress__meter" cx="120" cy="120" r="108" stroke-width="24" />
-			<circle class="progress__value" cx="120" cy="120" r="108" stroke-width="24" id="seconds_value"/>
-			<text transform="rotate(90, 19, 55)" font-family="Courier" font-size="140" fill="#808080" id="seconds_text">00</text>
+		<svg class="progress" width="280" height="280" viewBox="0 0 280 280">
+			<defs>
+
+				<filter id="sofGlow" height="300%" width="300%" x="-75%" y="-75%">
+					<!-- Thicken out the original shape -->
+					<feMorphology operator="dilate" radius="4" in="SourceAlpha" result="thicken" />
+
+					<!-- Use a gaussian blur to create the soft blurriness of the glow -->
+					<feGaussianBlur in="thicken" stdDeviation="10" result="blurred" />
+
+					<!-- Change the colour -->
+					<feFlood flood-color="rgb(0,0,0)" result="glowColor" />
+
+					<!-- Color in the glows -->
+					<feComposite in="glowColor" in2="blurred" operator="in" result="softGlow_colored" />
+
+					<!--	Layer the effects together -->
+					<feMerge>
+						<feMergeNode in="softGlow_colored"/>
+						<feMergeNode in="SourceGraphic"/>
+					</feMerge>
+
+				</filter>
+
+			</defs>
+	  
+			<circle class="progress__meter" cx="140" cy="140" r="108" stroke-width="24" filter="url(#sofGlow)"/>
+			<circle class="progress__value" cx="140" cy="140" r="108" stroke-width="24" filter="url(#sofGlow)" id="seconds_value"/>
+			<text x="60" y="-95" transform="rotate(90, 0, 0)" font-family="Courier" font-size="140" letter-spacing="-10" fill="#A0A0A0" id="seconds_text">00</text>
 		</svg>
-		<br/><h3>Seconds</h3>
+		<br/>
 		<input id="seconds_control" class="control" type="range" min="0" max="59" value="0" />
 	</div>
 
