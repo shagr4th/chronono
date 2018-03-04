@@ -3,6 +3,7 @@ package main
 import (
 	"encoding/hex"
 	"flag"
+	"fmt"
 	"github.com/alex023/clock"
 	"github.com/getlantern/systray"
 	"github.com/gorilla/websocket"
@@ -39,6 +40,15 @@ func makeTimestamp() int64 {
 	return time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
 }
 
+func fmtDuration(d time.Duration) string {
+	h := d / time.Hour
+	d -= h * time.Hour
+	m := d / time.Minute
+	d -= m * time.Minute
+	s := d / time.Second
+	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
+}
+
 var upgrader = websocket.Upgrader{} // use default options
 var startTime int64
 var localIP = GetLocalIP()
@@ -57,6 +67,10 @@ func timeMsg(w http.ResponseWriter, r *http.Request) {
 		var delta int64 = -1
 		if startTime > 0 {
 			delta = makeTimestamp() - startTime + offset*1000
+		}
+
+		if delta > 0 {
+			systray.SetTitle(fmtDuration(time.Duration(delta) * time.Millisecond))
 		}
 		var msg = []byte("time=" + strconv.Itoa(int(delta)))
 		err = c.WriteMessage(websocket.TextMessage, msg)
@@ -78,6 +92,7 @@ func timeMsg(w http.ResponseWriter, r *http.Request) {
 		if s == "clear" {
 			offset = 0
 			log.Print("Clear defaults")
+			systray.SetTitle(fmtDuration(time.Duration(0) * time.Millisecond))
 		} else if strings.HasPrefix(s, "start=") {
 			s = strings.TrimPrefix(s, "start=")
 			i, err := strconv.ParseInt(s, 10, 64)
@@ -202,7 +217,7 @@ func onReady() {
 
 	systray.SetIcon(MyArray)
 	systray.SetTooltip("Chronono")
-	mLink := systray.AddMenuItem("Launch browser page", "Launch browser page")
+	mLink := systray.AddMenuItem("Chronono", "Launch browser page")
 	go func() {
 		<-mLink.ClickedCh
 		switch runtime.GOOS {
@@ -212,6 +227,7 @@ func onReady() {
 			_ = exec.Command("open", url).Start()
 		}
 	}()
+	systray.AddSeparator()
 	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
 	go func() {
 		<-mQuit.ClickedCh
