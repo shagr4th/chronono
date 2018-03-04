@@ -1,8 +1,10 @@
 package main
 
 import (
+	"encoding/hex"
 	"flag"
 	"github.com/alex023/clock"
+	"github.com/getlantern/systray"
 	"github.com/gorilla/websocket"
 	"github.com/thestk/rtmidi/contrib/go/rtmidi"
 	"html/template"
@@ -41,7 +43,7 @@ var localIP = GetLocalIP()
 var offset int64
 var myClock = clock.NewClock()
 
-func echo(w http.ResponseWriter, r *http.Request) {
+func timeMsg(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Print("upgrade:", err)
@@ -54,8 +56,8 @@ func echo(w http.ResponseWriter, r *http.Request) {
 		if startTime > 0 {
 			delta = makeTimestamp() - startTime + offset*1000
 		}
-		var ss = []byte(strconv.Itoa(int(delta)))
-		err = c.WriteMessage(websocket.TextMessage, ss)
+		var msg = []byte("time=" + strconv.Itoa(int(delta)))
+		err = c.WriteMessage(websocket.TextMessage, msg)
 		if err != nil {
 			log.Println("Websocket client write error :", err)
 		}
@@ -110,108 +112,119 @@ func home(w http.ResponseWriter, r *http.Request) {
 		WSLocation   string
 		HTTPLocation string
 	}{
-		WSLocation:   "ws://" + r.Host + "/echo",
+		WSLocation:   "ws://" + r.Host + "/time",
 		HTTPLocation: "http://" + r.Host,
 	}
 	homeTemplate.Execute(w, data)
 }
 
-func midiEventScan(deviceName string, portNumber int) {
-	log.Printf("Listening to Midi device : %s\n", deviceName)
-	midiDeviceInput, err := rtmidi.NewMIDIInDefault()
-	if err != nil {
-		log.Print(err)
-		return
-	}
-
-	defer midiDeviceInput.Destroy()
-	if err := midiDeviceInput.OpenPort(portNumber, "RtMidi"); err != nil {
-		log.Print(err)
-		log.Printf("Disconnected MIDI Device %s", deviceName)
-		delete(midiActiveDevices, deviceName)
-		return
-	}
-	defer midiDeviceInput.Close()
-
-	for {
-		m, t, err := midiDeviceInput.Message()
-		if len(m) > 0 && m[0] != 224 {
-			log.Println(deviceName, m, t, err)
-			if m[0] == 128 && m[1] == 36 {
-				log.Print("Received C1 on MIDI Channel 1")
-				start()
-			}
-			if m[0] == 127 {
-				log.Print("Received 127")
-				start()
-			}
-		}
-	}
-
-}
-
-var midiActiveDevices = make(map[string]int)
-
 // http://midi.teragonaudio.com/tech/midispec.htm
 
-func midiDevicesScan(midiInput rtmidi.MIDIIn) {
+// Scan midi devices
+// TODO: detect disconnections and release appropriate objects (not sure if RtMidi is able to do it)
+func midiDevicesScan(midistartcode *string, midistopcode *string) {
 
-	portCount, err := midiInput.PortCount()
+	var midiActiveDevices = make(map[string]rtmidi.MIDIIn)
+
+	midiDefaultInput, err := rtmidi.NewMIDIInDefault()
 	if err != nil {
 		log.Print(err)
 		return
 	}
+	defer midiDefaultInput.Close()
 
-	for i := 0; i < portCount; i++ {
-		inp, err := midiInput.PortName(i)
+	for {
+
+		portCount, err := midiDefaultInput.PortCount()
 		if err != nil {
 			log.Print(err)
-			continue
+			return
 		}
 
-		_, ok := midiActiveDevices[inp]
-		if ok {
-			continue
+		for i := 0; i < portCount; i++ {
+			inp, err := midiDefaultInput.PortName(i)
+			if err != nil {
+				log.Print(err)
+				continue
+			}
+
+			_, ok := midiActiveDevices[inp]
+			if ok {
+				continue
+			}
+
+			log.Printf("Found new Midi device : %s\n", inp)
+			midiActiveDevices[inp], err = rtmidi.NewMIDIInDefault()
+			if err != nil {
+				log.Print(err)
+				continue
+			} else {
+				if err := midiActiveDevices[inp].OpenPort(i, inp); err != nil {
+					log.Fatal(err)
+				}
+				midiActiveDevices[inp].SetCallback(func(m rtmidi.MIDIIn, msg []byte, t float64) {
+					dst := strings.ToUpper(hex.EncodeToString(msg))
+					log.Println(dst)
+					if strings.HasPrefix(dst, *midistartcode) {
+						log.Print("Received MIDI start event")
+						start()
+					}
+					if strings.HasPrefix(dst, *midistopcode) {
+						log.Print("Received MIDI stop event")
+						stop()
+					}
+				})
+			}
 		}
 
-		log.Printf("Found new Midi device : %s (%d)\n", inp, i)
-		midiActiveDevices[inp] = i
-		go midiEventScan(inp, i)
+		time.Sleep(time.Duration(10 * time.Second))
+
 	}
-
-	time.Sleep(time.Duration(10 * time.Second))
-
-	midiDevicesScan(midiInput)
 
 }
 
 func main() {
 
-	port := flag.String("p", "8811", "port to serve on")
-	_ = port
+	systray.Run(onReady, onExit)
+
+}
+
+func onReady() {
+
+	systray.SetIcon(MyArray)
+	systray.SetTooltip("Chronono")
+	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
+	go func() {
+		<-mQuit.ClickedCh
+		log.Println("Requesting quit")
+		systray.Quit()
+		log.Println("Finished quitting")
+	}()
+
+	port := flag.String("p", "8811", "http port to serve on")
+	midistartcode := flag.String("midistartcode", "FA", "MIDI pattern for clock start")
+	midistopcode := flag.String("midistopcode", "FC", "MIDI pattern for clock stop")
 	flag.Parse()
 
-	http.HandleFunc("/echo", echo)
+	http.HandleFunc("/time", timeMsg)
 	http.HandleFunc("/", home)
 	go func() {
 		log.Printf("Serving on http://%s\n", localIP+":"+*port)
 		log.Fatal(http.ListenAndServe(localIP+":"+*port, nil))
 	}()
-	midiDefaultInput, err := rtmidi.NewMIDIInDefault()
-	defer midiDefaultInput.Close()
-	if err != nil {
-		log.Print(err)
-	} else {
-		go midiDevicesScan(midiDefaultInput)
-	}
+	go midiDevicesScan(midistartcode, midistopcode)
 	select {}
+}
+
+func onExit() {
+	// clean up here
 }
 
 var homeTemplate = template.Must(template.New("").Parse(`
 <style>
 
   body {
-	  background: black;
+	  background: #303030;
 	  color: gray;
   }
   
@@ -229,7 +242,7 @@ var homeTemplate = template.Must(template.New("").Parse(`
 	}
 	
 	.progress__value {
-		stroke: #46b8da;
+		stroke: #3893AE;
 		stroke-linecap: round;
 	}
 	
@@ -250,9 +263,9 @@ var homeTemplate = template.Must(template.New("").Parse(`
 	}
 
 	.button {
-		background-color: #46b8da;
-		color: black;
-		border: 2px solid #A0A0A0;
+		background-color: black;
+		color: white;
+		border: 0px solid #A0A0A0;
 		padding: 15px 32px;
 		text-align: center;
 		text-decoration: none;
@@ -263,27 +276,29 @@ var homeTemplate = template.Must(template.New("").Parse(`
 	}
 	
 	.button:hover {
-		background-color: #86d0e7;
-		color: white;
+		background-color: lightgray;
+		color: black;
 	}
 
-	h1 {
-		text-shadow: 0 0 10px #46b8da;
-		font-size: 60px;
+	.button:focus {outline:0;}
+
+	.title {
+		text-shadow: 0 0 20px black;
+		color: lightgray;
+		font-size: 40px;
 	}
 	
 </style>
 	
 <div class="clock">
 	
-	<h1>Chronono</h1>
-	<h2 id="info">{{.HTTPLocation}}</h2>
+	<h2 class="title">chronono</h2>
 	<div class="clockdiv">
 		 
 		<svg class="progress" width="240" height="240" viewBox="0 0 240 240">
 			<circle class="progress__meter" cx="120" cy="120" r="108" stroke-width="24" />
 			<circle class="progress__value" cx="120" cy="120" r="108" stroke-width="24" id="hours_value"/>
-			<text transform="rotate(90, 12, 70)" font-family="Helvetica" font-size="120" fill="#808080" id="hours_text">00</text>
+			<text transform="rotate(90, 19, 55)" font-family="Courier" font-size="140" fill="#808080" id="hours_text">00</text>
 		</svg>
 		<br/><h3>Hours</h3>
 		<input id="hours_control" class="control" type="range" min="0" max="11" value="0" />
@@ -294,7 +309,7 @@ var homeTemplate = template.Must(template.New("").Parse(`
 		<svg class="progress" width="240" height="240" viewBox="0 0 240 240">
 			<circle class="progress__meter" cx="120" cy="120" r="108" stroke-width="24" />
 			<circle class="progress__value" cx="120" cy="120" r="108" stroke-width="24" id="minutes_value"/>
-			<text transform="rotate(90, 12, 70)" font-family="Helvetica" font-size="120" fill="#808080" id="minutes_text">00</text>
+			<text transform="rotate(90, 19, 55)" font-family="Courier" font-size="140" fill="#808080" id="minutes_text">00</text>
 		</svg>
 		<br/><h3>Minutes</h3>
 		<input id="minutes_control" class="control" type="range" min="0" max="59" value="0" />
@@ -305,13 +320,15 @@ var homeTemplate = template.Must(template.New("").Parse(`
 		<svg class="progress" width="240" height="240" viewBox="0 0 240 240">
 			<circle class="progress__meter" cx="120" cy="120" r="108" stroke-width="24" />
 			<circle class="progress__value" cx="120" cy="120" r="108" stroke-width="24" id="seconds_value"/>
-			<text transform="rotate(90, 12, 70)" font-family="Helvetica" font-size="120" fill="#808080" id="seconds_text">00</text>
+			<text transform="rotate(90, 19, 55)" font-family="Courier" font-size="140" fill="#808080" id="seconds_text">00</text>
 		</svg>
 		<br/><h3>Seconds</h3>
 		<input id="seconds_control" class="control" type="range" min="0" max="59" value="0" />
 	</div>
 
+	<h3 id="info">Address : {{.HTTPLocation}}</h3>
 </div>
+
 <div class="clock">
 
 	<input id="start" type="button" class="button" value="Start" />
@@ -371,9 +388,11 @@ var homeTemplate = template.Must(template.New("").Parse(`
 			showError("Server lost");
 		}
 		ws.onmessage = function(evt) {
-			var timeInMs = parseInt(evt.data);
-			if (timeInMs >= 0)
-				setTime(timeInMs/1000);
+			if (evt.data && evt.data.lastIndexOf('time=', 0) === 0) {
+				var timeInMs = parseInt(evt.data.substring(5));
+				if (timeInMs >= 0)
+					setTime(timeInMs/1000);
+			}
 		}
 		ws.onerror = function(evt) {
 			showError("ERROR: " + evt.data);
