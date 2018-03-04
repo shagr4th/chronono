@@ -11,6 +11,8 @@ import (
 	"log"
 	"net"
 	"net/http"
+	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"time"
@@ -191,8 +193,25 @@ func main() {
 
 func onReady() {
 
+	port := flag.String("p", "8811", "http port to serve on")
+	midistartcode := flag.String("midistartcode", "FA", "MIDI pattern for clock start")
+	midistopcode := flag.String("midistopcode", "FC", "MIDI pattern for clock stop")
+	flag.Parse()
+
+	var url = "http://" + localIP + ":" + *port
+
 	systray.SetIcon(MyArray)
 	systray.SetTooltip("Chronono")
+	mLink := systray.AddMenuItem("Launch browser page", "Launch browser page")
+	go func() {
+		<-mLink.ClickedCh
+		switch runtime.GOOS {
+		case "linux":
+			_ = exec.Command("xdg-open", url).Start()
+		case "windows", "darwin":
+			_ = exec.Command("open", url).Start()
+		}
+	}()
 	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
 	go func() {
 		<-mQuit.ClickedCh
@@ -201,15 +220,10 @@ func onReady() {
 		log.Println("Finished quitting")
 	}()
 
-	port := flag.String("p", "8811", "http port to serve on")
-	midistartcode := flag.String("midistartcode", "FA", "MIDI pattern for clock start")
-	midistopcode := flag.String("midistopcode", "FC", "MIDI pattern for clock stop")
-	flag.Parse()
-
 	http.HandleFunc("/time", timeMsg)
 	http.HandleFunc("/", home)
 	go func() {
-		log.Printf("Serving on http://%s\n", localIP+":"+*port)
+		log.Printf("Serving on %s\n", url)
 		log.Fatal(http.ListenAndServe(localIP+":"+*port, nil))
 	}()
 	go midiDevicesScan(midistartcode, midistopcode)
