@@ -206,6 +206,17 @@ func main() {
 
 }
 
+func linkListener(url string, mLink systray.MenuItem) {
+	<-mLink.ClickedCh
+	switch runtime.GOOS {
+	case "linux":
+		_ = exec.Command("xdg-open", url).Start()
+	case "windows", "darwin":
+		_ = exec.Command("open", url).Start()
+	}
+	linkListener(url, mLink)
+}
+
 func onReady() {
 
 	port := flag.String("p", "8811", "http port to serve on")
@@ -218,15 +229,7 @@ func onReady() {
 	systray.SetIcon(MyArray)
 	systray.SetTooltip("Chronono")
 	mLink := systray.AddMenuItem("Chronono", "Launch browser page")
-	go func() {
-		<-mLink.ClickedCh
-		switch runtime.GOOS {
-		case "linux":
-			_ = exec.Command("xdg-open", url).Start()
-		case "windows", "darwin":
-			_ = exec.Command("open", url).Start()
-		}
-	}()
+	go linkListener(url, *mLink)
 	systray.AddSeparator()
 	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
 	go func() {
