@@ -14,6 +14,7 @@ import (
 	"net"
 	"net/http"
 	"os/exec"
+	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
@@ -136,9 +137,11 @@ func home(w http.ResponseWriter, r *http.Request) {
 
 // Scan midi devices
 // TODO: detect disconnections and release appropriate objects (not sure if RtMidi is able to do it)
-func midiDevicesScan(midistartcode *string, midistopcode *string) {
+func midiDevicesScan(midistart *string, midistop *string) {
 
 	var midiActiveDevices = make(map[string]rtmidi.MIDIIn)
+	reStart, _ := regexp.Compile("(?i)" + *midistart)
+	reStop, _ := regexp.Compile("(?i)" + *midistop)
 
 	midiDefaultInput, err := rtmidi.NewMIDIInDefault()
 	if err != nil {
@@ -179,11 +182,11 @@ func midiDevicesScan(midistartcode *string, midistopcode *string) {
 				midiActiveDevices[inp].SetCallback(func(m rtmidi.MIDIIn, msg []byte, t float64) {
 					dst := strings.ToUpper(hex.EncodeToString(msg))
 					log.Println(dst)
-					if strings.HasPrefix(dst, *midistartcode) {
+					if reStart.Match([]byte(dst)) {
 						log.Print("Received MIDI start event")
 						start()
 					}
-					if strings.HasPrefix(dst, *midistopcode) {
+					if reStop.Match([]byte(dst)) {
 						log.Print("Received MIDI stop event")
 						stop()
 					}
@@ -231,8 +234,8 @@ func linkListener(url string, mLink systray.MenuItem) {
 func onReady() {
 
 	port := flag.String("p", "8811", "http port to serve on")
-	midistartcode := flag.String("midistartcode", "FA", "MIDI pattern for clock start")
-	midistopcode := flag.String("midistopcode", "FC", "MIDI pattern for clock stop")
+	midistart := flag.String("midistart", "FA.*", "MIDI regex for clock start")
+	midistop := flag.String("midistop", "FC.*", "MIDI regex for clock stop")
 	flag.Parse()
 
 	var url = "http://" + localIP + ":" + *port
@@ -256,7 +259,7 @@ func onReady() {
 		log.Printf("Serving on %s\n", url)
 		log.Fatal(http.ListenAndServe(localIP+":"+*port, nil))
 	}()
-	go midiDevicesScan(midistartcode, midistopcode)
+	go midiDevicesScan(midistart, midistop)
 	go showSystray()
 	select {}
 }
