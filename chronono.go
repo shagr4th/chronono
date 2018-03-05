@@ -67,10 +67,12 @@ func timeMsg(w http.ResponseWriter, r *http.Request) {
 	log.Printf("New connection: %s", r.RemoteAddr)
 	defer c.Close()
 	job, inserted := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
-		var msg = []byte("time=" + strconv.Itoa(int(offset)))
-		err = c.WriteMessage(websocket.TextMessage, msg)
-		if err != nil {
-			log.Println("Websocket client write error :", err)
+		if startTime > 0 {
+			var msg = []byte("time=" + strconv.FormatInt(offset, 10))
+			err = c.WriteMessage(websocket.TextMessage, msg)
+			if err != nil {
+				log.Println("Websocket client write error :", err)
+			}
 		}
 	})
 	if !inserted {
@@ -202,13 +204,13 @@ func main() {
 }
 
 func showSystray() {
-	var oldOffset int64
-	_, _ = myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
+	var oldOffset int64 = -1
+	myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
 		if startTime > 0 {
 			offset = makeTimestamp() - startTime
 		}
 
-		if offset > 0 && math.Floor(float64(oldOffset)/1000) != math.Floor(float64(offset)/1000) {
+		if math.Floor(float64(oldOffset)/1000) != math.Floor(float64(offset)/1000) {
 			systray.SetTitle(fmtDuration(time.Duration(offset) * time.Millisecond))
 			oldOffset = offset
 		}
@@ -236,7 +238,6 @@ func onReady() {
 	var url = "http://" + localIP + ":" + *port
 
 	systray.SetIcon(MyArray)
-	systray.SetTitle(fmtDuration(0))
 	systray.SetTooltip("Chronono")
 	mLink := systray.AddMenuItem("Chronono", "Launch browser page")
 	go linkListener(url, *mLink)
@@ -286,7 +287,7 @@ var homeTemplate = template.Must(template.New("").Parse(`
 	}
 	
 	.progress__value {
-		stroke: #3893AE;
+		stroke: #38738E;
 		stroke-linecap: round;
 	}
 	
