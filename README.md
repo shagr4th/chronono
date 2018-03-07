@@ -6,6 +6,8 @@ Centralized timer on a local and offline network, with a midi trigger, to learn 
 
 ```
 Usage of ./chronono:
+  -midireset string
+        MIDI regex for clock reset (default "FF.*")
   -midistart string
         MIDI regex for clock start (default "FA.*")
   -midistop string

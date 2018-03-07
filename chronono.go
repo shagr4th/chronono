@@ -88,9 +88,7 @@ func timeMsg(w http.ResponseWriter, r *http.Request) {
 		}
 		s := string(message)
 		if s == "clear" {
-			offset = 0
-			log.Print("Clear defaults")
-			systray.SetTitle(fmtDuration(time.Duration(0) * time.Millisecond))
+			reset()
 		} else if strings.HasPrefix(s, "start=") {
 			s = strings.TrimPrefix(s, "start=")
 			i, err := strconv.ParseInt(s, 10, 64)
@@ -106,6 +104,12 @@ func timeMsg(w http.ResponseWriter, r *http.Request) {
 
 	}
 	log.Printf("Closed connection: %s", r.RemoteAddr)
+}
+
+func reset() {
+	offset = 0
+	log.Print("Clear defaults")
+	systray.SetTitle(fmtDuration(time.Duration(0) * time.Millisecond))
 }
 
 func start() {
@@ -137,11 +141,12 @@ func home(w http.ResponseWriter, r *http.Request) {
 
 // Scan midi devices
 // TODO: detect disconnections and release appropriate objects (not sure if RtMidi is able to do it)
-func midiDevicesScan(midistart *string, midistop *string) {
+func midiDevicesScan(midistart *string, midistop *string, midireset *string) {
 
 	var midiActiveDevices = make(map[string]rtmidi.MIDIIn)
 	reStart, _ := regexp.Compile("(?i)" + *midistart)
 	reStop, _ := regexp.Compile("(?i)" + *midistop)
+	reReset, _ := regexp.Compile("(?i)" + *midireset)
 
 	midiDefaultInput, err := rtmidi.NewMIDIInDefault()
 	if err != nil {
@@ -185,10 +190,12 @@ func midiDevicesScan(midistart *string, midistop *string) {
 					if reStart.Match([]byte(dst)) {
 						log.Print("Received MIDI start event")
 						start()
-					}
-					if reStop.Match([]byte(dst)) {
+					} else if reStop.Match([]byte(dst)) {
 						log.Print("Received MIDI stop event")
 						stop()
+					} else if reReset.Match([]byte(dst)) {
+						log.Print("Received MIDI reset event")
+						reset()
 					}
 				})
 			}
@@ -236,6 +243,7 @@ func onReady() {
 	port := flag.String("p", "8811", "http port to serve on")
 	midistart := flag.String("midistart", "FA.*", "MIDI regex for clock start")
 	midistop := flag.String("midistop", "FC.*", "MIDI regex for clock stop")
+	midireset := flag.String("midireset", "FF.*", "MIDI regex for clock reset")
 	flag.Parse()
 
 	var url = "http://" + localIP + ":" + *port
@@ -259,7 +267,7 @@ func onReady() {
 		log.Printf("Serving on %s\n", url)
 		log.Fatal(http.ListenAndServe(localIP+":"+*port, nil))
 	}()
-	go midiDevicesScan(midistart, midistop)
+	go midiDevicesScan(midistart, midistop, midireset)
 	go showSystray()
 	select {}
 }
