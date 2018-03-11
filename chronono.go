@@ -89,17 +89,21 @@ func timeMsg(w http.ResponseWriter, r *http.Request) {
 		s := string(message)
 		if s == "clear" {
 			reset()
-		} else if strings.HasPrefix(s, "start=") {
-			s = strings.TrimPrefix(s, "start=")
+		} else if s == "start" {
+			start()
+		} else if s == "stop" {
+			stop()
+		} else if strings.HasPrefix(s, "time=") {
+			s = strings.TrimPrefix(s, "time=")
 			i, err := strconv.ParseInt(s, 10, 64)
 			if err != nil {
 				log.Println("Convert error :", err)
 				break
 			}
-			offset = i
-			start()
-		} else if s == "stop" {
-			stop()
+			if startTime == 0 {
+				log.Print("Time set to " + strconv.Itoa(int(i/1000)) + " seconds")
+				offset = i
+			}
 		}
 
 	}
@@ -241,8 +245,8 @@ func linkListener(url string, mLink systray.MenuItem) {
 func onReady() {
 
 	port := flag.String("p", "8811", "http port to serve on")
-	midistart := flag.String("midistart", "FA.*", "MIDI regex for clock start")
-	midistop := flag.String("midistop", "FC.*", "MIDI regex for clock stop")
+	midistart := flag.String("midistart", "(BF7F7F)|(FA).*", "MIDI regex for clock start")
+	midistop := flag.String("midistop", "(BF7F00)|(FC).*", "MIDI regex for clock stop")
 	midireset := flag.String("midireset", "FF.*", "MIDI regex for clock reset")
 	flag.Parse()
 
@@ -418,6 +422,8 @@ var homeTemplate = template.Must(template.New("").Parse(`
 			minutes = value;
 		if (name == 'seconds')
 			seconds = value;
+		if (ws)
+			ws.send("time="+1000*Math.floor(hours*3600+minutes*60+seconds));
 	}
 	
 	function registerControl(name) {
@@ -472,7 +478,7 @@ var homeTemplate = template.Must(template.New("").Parse(`
 
 		document.getElementById("start").onclick = function (evt) {
 			if (ws)
-				ws.send("start="+1000*Math.floor(hours*3600+minutes*60+seconds));
+				ws.send("start");
 		}
 	
 		document.getElementById("stop").onclick = function (evt) {
