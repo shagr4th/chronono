@@ -15,3 +15,7 @@ Usage of ./chronono:
   -p string
         http port to serve on (default "8811")
 ```
+
+## Screenshot
+
+<img src="screenshot.png"/>
