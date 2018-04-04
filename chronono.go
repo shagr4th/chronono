@@ -499,22 +499,16 @@ var homeTemplate = template.Must(template.New("").Parse(`
 		console.log("Websocket initialized");
 
 		document.getElementById("start").onclick = function (evt) {
-			if (blocked)
-				return;
 			if (ws)
 				ws.send("start");
 		}
 	
 		document.getElementById("stop").onclick = function (evt) {
-			if (blocked)
-				return;
 			if (ws)
 				ws.send("stop");
 		}
 
 		document.getElementById("reset").onclick = function (evt) {
-			if (blocked)
-				return;
 			if (ws)
 				ws.send("reset");
 			setTime(0);
