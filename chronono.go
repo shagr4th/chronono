@@ -87,7 +87,7 @@ func timeMsg(w http.ResponseWriter, r *http.Request) {
 			break
 		}
 		s := string(message)
-		if s == "clear" {
+		if s == "reset" {
 			reset()
 		} else if s == "start" {
 			start()
@@ -112,7 +112,7 @@ func timeMsg(w http.ResponseWriter, r *http.Request) {
 
 func reset() {
 	offset = 0
-	log.Print("Clear defaults")
+	log.Print("Reset defaults")
 	systray.SetTitle(fmtDuration(time.Duration(0) * time.Millisecond))
 }
 
@@ -335,7 +335,7 @@ var homeTemplate = template.Must(template.New("").Parse(`
 		cursor: pointer;
 	}
 	
-	.button:hover {
+	.button:hover:not([disabled]) {
 		background-color: lightgray;
 		color: black;
 	}
@@ -353,37 +353,34 @@ var homeTemplate = template.Must(template.New("").Parse(`
 <div class="clock">
 	
 	<h2 class="title">chronono</h2>
-	<div class="clockdiv">
+	<div class="clockdiv" id="hours_control" >
 
 		<svg class="progress" width="240" height="240" viewBox="0 0 240 240">
 			<circle class="progress__meter" cx="120" cy="120" r="108" stroke-width="24"/>
 			<circle class="progress__value" cx="120" cy="120" r="108" stroke-width="24" id="hours_value"/>
 			<text x="40" y="-75" transform="rotate(90, 0, 0)" font-family="Courier" font-size="140" letter-spacing="-10" fill="#A0A0A0" id="hours_text">00</text>
 		</svg>
-		<br/>
-		<input id="hours_control" class="control" type="range" min="0" max="11" value="0" />
+
 	</div>
 
-	<div class="clockdiv">
+	<div class="clockdiv" id="minutes_control">
 		
 		<svg class="progress" width="240" height="240" viewBox="0 0 240 240">
 			<circle class="progress__meter" cx="120" cy="120" r="108" stroke-width="24"/>
 			<circle class="progress__value" cx="120" cy="120" r="108" stroke-width="24" id="minutes_value"/>
 			<text x="40" y="-75" transform="rotate(90, 0, 0)" font-family="Courier" font-size="140" letter-spacing="-10" fill="#A0A0A0" id="minutes_text">00</text>
 		</svg>
-		<br/>
-		<input id="minutes_control" class="control" type="range" min="0" max="59" value="0" />
+
 	</div>
 
-	<div class="clockdiv">
+	<div class="clockdiv" id="seconds_control">
 		
 		<svg class="progress" width="240" height="240" viewBox="0 0 240 240">
 			<circle class="progress__meter" cx="120" cy="120" r="108" stroke-width="24"/>
 			<circle class="progress__value" cx="120" cy="120" r="108" stroke-width="24" id="seconds_value"/>
 			<text x="40" y="-75" transform="rotate(90, 0, 0)" font-family="Courier" font-size="140" letter-spacing="-10" fill="#A0A0A0" id="seconds_text">00</text>
 		</svg>
-		<br/>
-		<input id="seconds_control" class="control" type="range" min="0" max="59" value="0" />
+
 	</div>
 
 	<h3 id="info">Address : {{.HTTPLocation}}</h3>
@@ -393,7 +390,7 @@ var homeTemplate = template.Must(template.New("").Parse(`
 
 	<input id="start" type="button" class="button" value="Start" />
 	<input id="stop"  type="button" class="button" value="Stop" />
-	<input id="clear" type="button" class="button" value="Clear" />
+	<input id="reset" type="button" class="button" value="Reset" />
 
 </div>
 	
@@ -403,19 +400,17 @@ var homeTemplate = template.Must(template.New("").Parse(`
 	var CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 	var ws;
 	var hours = 0, minutes = 0, seconds = 0;
+	var blocked = false;
 
-	function setControlValue(name, value) {
-		var control = document.getElementById(name + '_control');
+	function setControlValue(name, value, max) {
 		var control_value = document.getElementById(name + '_value');
 		var control_text_value = document.getElementById(name + '_text');
 
-		var max = parseInt(control.max) + 1;
 		var progress = value / max;
 		var dashoffset = CIRCUMFERENCE * (1 - progress);
 			
 		control_value.style.strokeDashoffset = dashoffset;
 		control_text_value.textContent = ('0' + Math.floor(value)).slice(-2);
-		control.value = value;
 		if (name == 'hours')
 			hours = value;
 		if (name == 'minutes')
@@ -425,13 +420,32 @@ var homeTemplate = template.Must(template.New("").Parse(`
 		if (ws)
 			ws.send("time="+1000*Math.floor(hours*3600+minutes*60+seconds));
 	}
+
+	function calculateAngle(x, y) {
+		var k = Math.abs(y) / Math.abs(x);
+		var angle = Math.atan(k) * 180 / Math.PI;
+		if(y * x > 0){
+			angle = 90 - angle + (y < 0 ? 180 : 0);
+		} else {
+		  angle = angle + (y < 0 ? 90 : 270);
+		}
+		
+		return angle;
+	  }
 	
 	function registerControl(name) {
 		var control = document.getElementById(name + '_control');
 		var control_value = document.getElementById(name + '_value');
 		
-		control.addEventListener('input', function(event) {
-			setControlValue(name, event.target.valueAsNumber);
+		control.addEventListener('click', function(event) {
+			if (blocked)
+				return;
+			var deltaX = event.offsetX - 120;
+			var deltaY = event.offsetY - 120;
+			
+			var value = Math.floor(calculateAngle(deltaY, deltaX) / (name == 'hours' ? 30 : 6));
+
+			setControlValue(name, value, name == 'hours' ? 12 : 60);
 		});
 		control_value.style.strokeDasharray = CIRCUMFERENCE;
 		control_value.style.strokeDashoffset = CIRCUMFERENCE;
@@ -468,27 +482,41 @@ var homeTemplate = template.Must(template.New("").Parse(`
 
 	function setTime(time) {
 		var h = Math.floor(time / 3600);
-		setControlValue('hours', h);
-		setControlValue('minutes', Math.floor((time - h * 3600) / 60));
-		setControlValue('seconds', time % 60);
+		setControlValue('hours', h, 12);
+		setControlValue('minutes', Math.floor((time - h * 3600) / 60), 60);
+		setControlValue('seconds', time % 60, 60);
+	}
+
+	function setControlStatus(b, name) {
+		blocked = b;
+		if (blocked)
+			document.getElementById(name).setAttribute("disabled","disabled");
+		else
+			document.getElementById(name).removeAttribute("disabled");
 	}
 
 	if (initWs("{{.WSLocation}}")) {
 		console.log("Websocket initialized");
 
 		document.getElementById("start").onclick = function (evt) {
+			if (blocked)
+				return;
 			if (ws)
 				ws.send("start");
 		}
 	
 		document.getElementById("stop").onclick = function (evt) {
+			if (blocked)
+				return;
 			if (ws)
 				ws.send("stop");
 		}
 
-		document.getElementById("clear").onclick = function (evt) {
+		document.getElementById("reset").onclick = function (evt) {
+			if (blocked)
+				return;
 			if (ws)
-				ws.send("clear");
+				ws.send("reset");
 			setTime(0);
 		}
 
