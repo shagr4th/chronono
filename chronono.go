@@ -8,6 +8,7 @@ import (
 	"github.com/getlantern/systray"
 	"github.com/gorilla/websocket"
 	"github.com/thestk/rtmidi/contrib/go/rtmidi"
+	"github.com/zserge/webview"
 	"html/template"
 	"log"
 	"math"
@@ -58,6 +59,7 @@ var startTime int64
 var localIP = GetLocalIP()
 var offset int64
 var myClock = clock.NewClock()
+var url string
 
 func timeMsg(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
@@ -228,22 +230,34 @@ func midiDevicesScan(midistart *string, midistop *string, midireset *string) {
 
 func main() {
 
-	systray.Run(onReady, onExit)
+	port := flag.String("p", "8811", "http port to serve on")
+	midistart := flag.String("midistart", "(BF7F7F)|(FA).*", "MIDI regex for clock start")
+	midistop := flag.String("midistop", "(BF7F00)|(FC).*", "MIDI regex for clock stop")
+	midireset := flag.String("midireset", "FF.*", "MIDI regex for clock reset")
+	flag.Parse()
 
-}
+	url = "http://" + localIP + ":" + *port
 
-func showSystray() {
-	var oldOffset int64 = -1
-	myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
-		if startTime > 0 {
-			offset = makeTimestamp() - startTime
-		}
+	http.HandleFunc("/time", timeMsg)
+	http.HandleFunc("/", home)
+	go func() {
+		log.Printf("Serving on %s\n", url)
+		log.Fatal(http.ListenAndServe(localIP+":"+*port, nil))
+	}()
+	go midiDevicesScan(midistart, midistop, midireset)
 
-		if math.Floor(float64(oldOffset)/1000) != math.Floor(float64(offset)/1000) {
-			systray.SetTitle(fmtDuration(time.Duration(offset) * time.Millisecond))
-			oldOffset = offset
-		}
+	w := webview.New(webview.Settings{
+		Width:     1024,
+		Height:    600,
+		Title:     "Chronono",
+		Resizable: true,
+		URL:       url,
 	})
+	defer w.Exit()
+	systray.Run(setupSystray, func() {
+		w.Exit()
+	})
+	w.Run()
 }
 
 func linkListener(url string, mLink systray.MenuItem) {
@@ -257,15 +271,7 @@ func linkListener(url string, mLink systray.MenuItem) {
 	linkListener(url, mLink)
 }
 
-func onReady() {
-
-	port := flag.String("p", "8811", "http port to serve on")
-	midistart := flag.String("midistart", "(BF7F7F)|(FA).*", "MIDI regex for clock start")
-	midistop := flag.String("midistop", "(BF7F00)|(FC).*", "MIDI regex for clock stop")
-	midireset := flag.String("midireset", "FF.*", "MIDI regex for clock reset")
-	flag.Parse()
-
-	var url = "http://" + localIP + ":" + *port
+func setupSystray() {
 
 	systray.SetIcon(MyArray)
 	systray.SetTooltip("Chronono")
@@ -280,19 +286,18 @@ func onReady() {
 		log.Println("Finished quitting")
 	}()
 
-	http.HandleFunc("/time", timeMsg)
-	http.HandleFunc("/", home)
-	go func() {
-		log.Printf("Serving on %s\n", url)
-		log.Fatal(http.ListenAndServe(localIP+":"+*port, nil))
-	}()
-	go midiDevicesScan(midistart, midistop, midireset)
-	go showSystray()
-	select {}
-}
+	var oldOffset int64 = -1
+	myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
+		if startTime > 0 {
+			offset = makeTimestamp() - startTime
+		}
 
-func onExit() {
-	// clean up here
+		if math.Floor(float64(oldOffset)/1000) != math.Floor(float64(offset)/1000) {
+			systray.SetTitle(fmtDuration(time.Duration(offset) * time.Millisecond))
+			oldOffset = offset
+		}
+	})
+
 }
 
 var homeTemplate = template.Must(template.New("").Parse(`
