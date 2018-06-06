@@ -159,6 +159,8 @@ func midiDevicesScan(midistart *string, midistop *string, midireset *string) {
 	}
 	defer midiDefaultInput.Close()
 
+	log.Print("Listen to midi inputs")
+
 	for {
 
 		portCount, err := midiDefaultInput.PortCount()
@@ -179,7 +181,7 @@ func midiDevicesScan(midistart *string, midistop *string, midireset *string) {
 				continue
 			}
 
-			log.Printf("Found new Midi device : %s\n", inp)
+			log.Printf("Found midi input : %s (%d)\n", inp, i)
 			midiActiveDevices[inp], err = rtmidi.NewMIDIInDefault()
 			if err != nil {
 				log.Print(err)
@@ -190,7 +192,7 @@ func midiDevicesScan(midistart *string, midistop *string, midireset *string) {
 				}
 				midiActiveDevices[inp].SetCallback(func(m rtmidi.MIDIIn, msg []byte, t float64) {
 					dst := strings.ToUpper(hex.EncodeToString(msg))
-					log.Println(dst)
+					log.Printf("Received from %s, %s", inp, dst)
 					if reStart.Match([]byte(dst)) {
 						log.Print("Received MIDI start event")
 						start()
