@@ -144,24 +144,24 @@ func home(w http.ResponseWriter, r *http.Request) {
 // http://midi.teragonaudio.com/tech/midispec.htm
 
 // Scan midi devices
-// TODO: detect disconnections and release appropriate objects (not sure if RtMidi is able to do it)
 func midiDevicesScan(midistart *string, midistop *string, midireset *string) {
 
-	var midiActiveDevices = make(map[string]rtmidi.MIDIIn)
+	var midiDevices = make(map[string]rtmidi.MIDIIn)
 	reStart, _ := regexp.Compile("(?i)" + *midistart)
 	reStop, _ := regexp.Compile("(?i)" + *midistop)
 	reReset, _ := regexp.Compile("(?i)" + *midireset)
 
-	midiDefaultInput, err := rtmidi.NewMIDIInDefault()
-	if err != nil {
-		log.Print(err)
-		return
-	}
-	defer midiDefaultInput.Close()
-
-	log.Print("Listen to midi inputs")
+	log.Print("Listen to all midi inputs")
 
 	for {
+
+		activeDevices := make(map[string]int)
+
+		midiDefaultInput, err := rtmidi.NewMIDIInDefault()
+		if err != nil {
+			log.Print(err)
+			return
+		}
 
 		portCount, err := midiDefaultInput.PortCount()
 		if err != nil {
@@ -176,21 +176,23 @@ func midiDevicesScan(midistart *string, midistop *string, midireset *string) {
 				continue
 			}
 
-			_, ok := midiActiveDevices[inp]
+			activeDevices[inp] = i
+
+			_, ok := midiDevices[inp]
 			if ok {
 				continue
 			}
 
 			log.Printf("Found midi input : %s (%d)\n", inp, i)
-			midiActiveDevices[inp], err = rtmidi.NewMIDIInDefault()
+			midiDevices[inp], err = rtmidi.NewMIDIInDefault()
 			if err != nil {
 				log.Print(err)
 				continue
 			} else {
-				if err := midiActiveDevices[inp].OpenPort(i, inp); err != nil {
+				if err := midiDevices[inp].OpenPort(i, inp); err != nil {
 					log.Fatal(err)
 				}
-				midiActiveDevices[inp].SetCallback(func(m rtmidi.MIDIIn, msg []byte, t float64) {
+				midiDevices[inp].SetCallback(func(m rtmidi.MIDIIn, msg []byte, t float64) {
 					dst := strings.ToUpper(hex.EncodeToString(msg))
 					log.Printf("Received from %s, %s", inp, dst)
 					if reStart.Match([]byte(dst)) {
@@ -206,6 +208,17 @@ func midiDevicesScan(midistart *string, midistop *string, midireset *string) {
 				})
 			}
 		}
+
+		for inp, midiIn := range midiDevices {
+			_, ok := activeDevices[inp]
+			if !ok {
+				log.Printf("Closing input device %s", inp)
+				midiIn.Close()
+				delete(midiDevices, inp)
+			}
+		}
+
+		midiDefaultInput.Close()
 
 		time.Sleep(time.Duration(10 * time.Second))
 
