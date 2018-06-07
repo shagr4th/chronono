@@ -4,6 +4,12 @@
         background: #303030;
         color: gray;
     }
+
+    textarea {
+        background: #303030;
+        color: gray;
+        border: 0px;
+    }
     
       .progress {
           transform: rotate(-90deg);
@@ -48,7 +54,20 @@
           text-decoration: none;
           display: inline-block;
           font-size: 16px;
-          margin: 20px 10px;
+          margin: 15px 10px;
+          cursor: pointer;
+      }
+
+      .button-sm {
+          background-color: black;
+          color: white;
+          border: 0px solid #A0A0A0;
+          padding: 6px 16px;
+          text-align: center;
+          text-decoration: none;
+          display: inline-block;
+          font-size: 12px;
+          margin: 10px 5px;
           cursor: pointer;
       }
       
@@ -110,6 +129,14 @@
       <input id="reset" type="button" class="button" value="Reset" />
   
   </div>
+
+  <div class="clock">
+
+    <textarea id="logs" rows="5" style="width: 600px"></textarea> 
+  </div>
+  <div class="clock">
+    <input id="clear" type="button" class="button-sm" value="Clear" />
+  </div>
       
   <script>
       
@@ -119,7 +146,7 @@
       var hours = 0, minutes = 0, seconds = 0;
       var blocked = false;
   
-      function setControlValue(name, value, max) {
+      function setControlValue(name, value, max, nows) {
           var control_value = document.getElementById(name + '_value');
           var control_text_value = document.getElementById(name + '_text');
   
@@ -134,7 +161,7 @@
               minutes = value;
           if (name == 'seconds')
               seconds = value;
-          if (ws)
+          if (!nows && ws)
               ws.send("time="+1000*Math.floor(hours*3600+minutes*60+seconds));
       }
   
@@ -162,7 +189,7 @@
               
               var value = Math.floor(calculateAngle(deltaY, deltaX) / (name == 'hours' ? 30 : 6));
   
-              setControlValue(name, value, name == 'hours' ? 12 : 60);
+              setControlValue(name, value, name == 'hours' ? 12 : 60, false);
           });
           control_value.style.strokeDasharray = CIRCUMFERENCE;
           control_value.style.strokeDashoffset = CIRCUMFERENCE;
@@ -195,6 +222,8 @@
                   var timeInMs = parseInt(evt.data.substring(5));
                   if (timeInMs >= 0)
                       setTime(timeInMs/1000);
+              } else {
+                document.getElementById("logs").value += evt.data + "\n";
               }
           }
           ws.onerror = function(evt) {
@@ -209,9 +238,9 @@
   
       function setTime(time) {
           var h = Math.floor(time / 3600);
-          setControlValue('hours', h, 12);
-          setControlValue('minutes', Math.floor((time - h * 3600) / 60), 60);
-          setControlValue('seconds', time % 60, 60);
+          setControlValue('hours', h, 12, true);
+          setControlValue('minutes', Math.floor((time - h * 3600) / 60), 60, true);
+          setControlValue('seconds', time % 60, 60, true);
       }
   
       function setControlStatus(b, name) {
@@ -238,7 +267,10 @@
           document.getElementById("reset").onclick = function (evt) {
               if (ws)
                   ws.send("reset");
-              setTime(0);
+          }
+
+          document.getElementById("clear").onclick = function (evt) {
+                document.getElementById("logs").value = "";
           }
   
           registerControl('hours');

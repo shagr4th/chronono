@@ -19,7 +19,127 @@ import (
 	"time"
 )
 
-import _ "net/http/pprof"
+type Client struct {
+	hub *Hub
+
+	// The websocket connection.
+	conn *websocket.Conn
+
+	// Buffered channel of outbound messages.
+	send chan []byte
+}
+
+type Hub struct {
+	// Registered clients.
+	clients map[*Client]bool
+
+	// Inbound messages from the clients.
+	broadcast chan []byte
+
+	// Register requests from the clients.
+	register chan *Client
+
+	// Unregister requests from clients.
+	unregister chan *Client
+}
+
+func newHub() *Hub {
+	return &Hub{
+		broadcast:  make(chan []byte),
+		register:   make(chan *Client),
+		unregister: make(chan *Client),
+		clients:    make(map[*Client]bool),
+	}
+}
+
+func (h *Hub) run() {
+	for {
+		select {
+		case client := <-h.register:
+			LogPrintf("Opened client connection: %s", client.conn.RemoteAddr().String())
+			h.clients[client] = true
+		case client := <-h.unregister:
+			if _, ok := h.clients[client]; ok {
+				LogPrintf("Closed client connection: %s", client.conn.RemoteAddr().String())
+				delete(h.clients, client)
+				close(client.send)
+			}
+		case message := <-h.broadcast:
+			for client := range h.clients {
+				select {
+				case client.send <- message:
+				default:
+					close(client.send)
+					delete(h.clients, client)
+				}
+			}
+		}
+	}
+}
+
+func (c *Client) readPump() {
+	defer func() {
+		c.hub.unregister <- c
+		c.conn.Close()
+	}()
+	for {
+		_, message, err := c.conn.ReadMessage()
+		if err != nil {
+			log.Println("Websocket client read error : ", err)
+			break
+		}
+		s := string(message)
+		if s == "reset" {
+			reset()
+		} else if s == "start" {
+			start()
+		} else if s == "stop" {
+			stop()
+		} else if strings.HasPrefix(s, "time=") {
+			s = strings.TrimPrefix(s, "time=")
+			i, err := strconv.ParseInt(s, 10, 64)
+			if err != nil {
+				LogPrint("Convert error :", err)
+				break
+			}
+			if startTime == 0 {
+				LogPrint("Server time set to " + strconv.Itoa(int(i/1000)) + " seconds")
+				offset = i
+				go func() {
+					hub.broadcast <- []byte("time=" + strconv.FormatInt(offset, 10))
+				}()
+			}
+		}
+
+	}
+}
+
+func (c *Client) writePump() {
+	defer func() {
+		c.conn.Close()
+	}()
+	if startTime == 0 {
+		err := c.conn.WriteMessage(websocket.TextMessage, []byte("time="+strconv.FormatInt(offset, 10)))
+		if err != nil {
+			return
+		}
+	}
+	for {
+		select {
+		case message, ok := <-c.send:
+			if !ok {
+				// The hub closed the channel.
+				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+				return
+			}
+
+			err := c.conn.WriteMessage(websocket.TextMessage, message)
+			if err != nil {
+				return
+			}
+		}
+	}
+}
 
 // GetLocalIP returns the non loopback local IP of the host
 func GetLocalIP() string {
@@ -51,66 +171,47 @@ func fmtDuration(d time.Duration) string {
 	return fmt.Sprintf("%02d:%02d:%02d", h, m, s)
 }
 
+// LogPrintf Log
+func LogPrintf(format string, v ...interface{}) {
+	log.Printf(format, v...)
+	go func() {
+		hub.broadcast <- []byte(fmt.Sprintf(format, v...))
+	}()
+}
+
+// LogPrint Log
+func LogPrint(v ...interface{}) {
+	log.Print(v...)
+	go func() {
+		hub.broadcast <- []byte(fmt.Sprint(v...))
+	}()
+}
+
 var upgrader = websocket.Upgrader{} // use default options
 var startTime int64
 var localIP = GetLocalIP()
 var offset int64
 var myClock = clock.NewClock()
 var url string
+var hub = newHub()
 
-func timeMsg(w http.ResponseWriter, r *http.Request) {
+func timeMsg(hub *Hub, w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Print("upgrade:", err)
+		log.Print(err)
 		return
 	}
-	log.Printf("New connection: %s", r.RemoteAddr)
-	defer c.Close()
-	job, inserted := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
-		if startTime > 0 {
-			var msg = []byte("time=" + strconv.FormatInt(offset, 10))
-			err = c.WriteMessage(websocket.TextMessage, msg)
-			if err != nil {
-				log.Println("Websocket client write error :", err)
-			}
-		}
-	})
-	if !inserted {
-		log.Println("failure")
-	}
-	defer job.Cancel()
-	for {
-		_, message, err := c.ReadMessage()
-		if err != nil {
-			log.Println("Websocket client read error : ", err)
-			break
-		}
-		s := string(message)
-		if s == "reset" {
-			reset()
-		} else if s == "start" {
-			start()
-		} else if s == "stop" {
-			stop()
-		} else if strings.HasPrefix(s, "time=") {
-			s = strings.TrimPrefix(s, "time=")
-			i, err := strconv.ParseInt(s, 10, 64)
-			if err != nil {
-				log.Println("Convert error :", err)
-				break
-			}
-			if startTime == 0 {
-				log.Print("Time set to " + strconv.Itoa(int(i/1000)) + " seconds")
-				offset = i
-			}
-		}
 
-	}
-	log.Printf("Closed connection: %s", r.RemoteAddr)
+	client := &Client{hub: hub, conn: c, send: make(chan []byte, 256)}
+	client.hub.register <- client
+
+	go client.readPump()
+	go client.writePump()
 }
 
 func reset() {
 	offset = 0
+	hub.broadcast <- []byte("time=0")
 	log.Print("Reset defaults")
 	systray.SetTitle(fmtDuration(time.Duration(0) * time.Millisecond))
 }
@@ -142,13 +243,26 @@ func main() {
 	url = "http://" + localIP + ":" + *port
 
 	http.Handle("/", http.FileServer(box))
-	http.HandleFunc("/time", timeMsg)
+
+	go hub.run()
+	http.HandleFunc("/time", func(w http.ResponseWriter, r *http.Request) {
+		timeMsg(hub, w, r)
+	})
 	go func() {
-		log.Printf("Serving on %s\n", url)
+		log.Printf("Serving on %s", url)
 		log.Fatal(http.ListenAndServe(localIP+":"+*port, nil))
 	}()
 	go midiDevicesScan(midistart, midistop, midireset)
-
+	job, inserted := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
+		if startTime > 0 {
+			var msg = []byte("time=" + strconv.FormatInt(offset, 10))
+			hub.broadcast <- msg
+		}
+	})
+	if !inserted {
+		log.Println("failure")
+	}
+	defer job.Cancel()
 	w := webview.New(webview.Settings{
 		Width:     1024,
 		Height:    600,
