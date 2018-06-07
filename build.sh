@@ -1,4 +1,6 @@
-go build -ldflags="-s -w" && upx chronono
+#brew install upx
+
+$GOPATH/bin/packr && go build -ldflags="-s -w" && upx chronono
 rm -rf chronono.app
 mkdir chronono.app
 mkdir chronono.app/Contents

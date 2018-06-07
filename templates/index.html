@@ -1,0 +1,253 @@
+<style>
+
+    body {
+        background: #303030;
+        color: gray;
+    }
+    
+      .progress {
+          transform: rotate(-90deg);
+      }
+      
+      .progress__meter,
+      .progress__value {
+          fill: none;
+      }
+      
+      .progress__meter {
+          stroke: #404040;
+      }
+      
+      .progress__value {
+          stroke: #38738E;
+          stroke-linecap: round;
+      }
+      
+      .clock {
+          display: block;
+          margin: auto;
+          text-align: center;
+          font-family: Helvetica;
+      }
+      
+      .clockdiv{
+          display: inline-block;
+          text-align: center;
+      }
+  
+      .control {
+          width: 200px
+      }
+  
+      .button {
+          background-color: black;
+          color: white;
+          border: 0px solid #A0A0A0;
+          padding: 15px 32px;
+          text-align: center;
+          text-decoration: none;
+          display: inline-block;
+          font-size: 16px;
+          margin: 20px 10px;
+          cursor: pointer;
+      }
+      
+      .button:hover:not([disabled]) {
+          background-color: lightgray;
+          color: black;
+      }
+  
+      .button:focus {outline:0;}
+  
+      .title {
+          text-shadow: 0 0 20px black;
+          color: lightgray;
+          font-size: 40px;
+      }
+      
+  </style>
+      
+  <div class="clock">
+      
+      <h2 class="title">chronono</h2>
+      <div class="clockdiv" id="hours_control" >
+  
+          <svg class="progress" width="240" height="240" viewBox="0 0 240 240">
+              <circle class="progress__meter" cx="120" cy="120" r="108" stroke-width="24"/>
+              <circle class="progress__value" cx="120" cy="120" r="108" stroke-width="24" id="hours_value"/>
+              <text x="40" y="-75" transform="rotate(90, 0, 0)" font-family="Courier" font-size="140" letter-spacing="-10" fill="#A0A0A0" id="hours_text">00</text>
+          </svg>
+  
+      </div>
+  
+      <div class="clockdiv" id="minutes_control">
+          
+          <svg class="progress" width="240" height="240" viewBox="0 0 240 240">
+              <circle class="progress__meter" cx="120" cy="120" r="108" stroke-width="24"/>
+              <circle class="progress__value" cx="120" cy="120" r="108" stroke-width="24" id="minutes_value"/>
+              <text x="40" y="-75" transform="rotate(90, 0, 0)" font-family="Courier" font-size="140" letter-spacing="-10" fill="#A0A0A0" id="minutes_text">00</text>
+          </svg>
+  
+      </div>
+  
+      <div class="clockdiv" id="seconds_control">
+          
+          <svg class="progress" width="240" height="240" viewBox="0 0 240 240">
+              <circle class="progress__meter" cx="120" cy="120" r="108" stroke-width="24"/>
+              <circle class="progress__value" cx="120" cy="120" r="108" stroke-width="24" id="seconds_value"/>
+              <text x="40" y="-75" transform="rotate(90, 0, 0)" font-family="Courier" font-size="140" letter-spacing="-10" fill="#A0A0A0" id="seconds_text">00</text>
+          </svg>
+  
+      </div>
+  
+      <h3 id="info"></h3>
+  </div>
+  
+  <div class="clock">
+  
+      <input id="start" type="button" class="button" value="Start" />
+      <input id="stop"  type="button" class="button" value="Stop" />
+      <input id="reset" type="button" class="button" value="Reset" />
+  
+  </div>
+      
+  <script>
+      
+      var RADIUS = 108;
+      var CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+      var ws;
+      var hours = 0, minutes = 0, seconds = 0;
+      var blocked = false;
+  
+      function setControlValue(name, value, max) {
+          var control_value = document.getElementById(name + '_value');
+          var control_text_value = document.getElementById(name + '_text');
+  
+          var progress = value / max;
+          var dashoffset = CIRCUMFERENCE * (1 - progress);
+              
+          control_value.style.strokeDashoffset = dashoffset;
+          control_text_value.textContent = ('0' + Math.floor(value)).slice(-2);
+          if (name == 'hours')
+              hours = value;
+          if (name == 'minutes')
+              minutes = value;
+          if (name == 'seconds')
+              seconds = value;
+          if (ws)
+              ws.send("time="+1000*Math.floor(hours*3600+minutes*60+seconds));
+      }
+  
+      function calculateAngle(x, y) {
+          var k = Math.abs(y) / Math.abs(x);
+          var angle = Math.atan(k) * 180 / Math.PI;
+          if(y * x > 0){
+              angle = 90 - angle + (y < 0 ? 180 : 0);
+          } else {
+            angle = angle + (y < 0 ? 90 : 270);
+          }
+          
+          return angle;
+        }
+      
+      function registerControl(name) {
+          var control = document.getElementById(name + '_control');
+          var control_value = document.getElementById(name + '_value');
+          
+          control.addEventListener('click', function(event) {
+              if (blocked)
+                  return;
+              var deltaX = event.offsetX - 120;
+              var deltaY = event.offsetY - 120;
+              
+              var value = Math.floor(calculateAngle(deltaY, deltaX) / (name == 'hours' ? 30 : 6));
+  
+              setControlValue(name, value, name == 'hours' ? 12 : 60);
+          });
+          control_value.style.strokeDasharray = CIRCUMFERENCE;
+          control_value.style.strokeDashoffset = CIRCUMFERENCE;
+      }
+      
+      function initWs() {
+        var loc = window.location, new_uri;
+        if (loc.protocol === "https:") {
+            new_uri = "wss:";
+        } else {
+            new_uri = "ws:";
+        }
+        new_uri += "//" + loc.host + loc.pathname + "time";
+
+        document.getElementById("info").innerHTML = "Address : " + loc.protocol + "//" + loc.host + loc.pathname;
+
+          ws = new WebSocket(new_uri);
+          if (!ws)
+              return false;
+          ws.onopen = function(evt) {
+              console.log("OPEN");
+          }
+          ws.onclose = function(evt) {
+              console.log("CLOSE");
+              ws = null;
+              showError("Server lost");
+          }
+          ws.onmessage = function(evt) {
+              if (evt.data && evt.data.lastIndexOf('time=', 0) === 0) {
+                  var timeInMs = parseInt(evt.data.substring(5));
+                  if (timeInMs >= 0)
+                      setTime(timeInMs/1000);
+              }
+          }
+          ws.onerror = function(evt) {
+              showError("ERROR: " + evt.data);
+          }
+          return true;
+      }
+  
+      function showError(title) {
+          document.getElementById("info").innerHTML = "<font color='red'>" + title + "</font>";
+      }
+  
+      function setTime(time) {
+          var h = Math.floor(time / 3600);
+          setControlValue('hours', h, 12);
+          setControlValue('minutes', Math.floor((time - h * 3600) / 60), 60);
+          setControlValue('seconds', time % 60, 60);
+      }
+  
+      function setControlStatus(b, name) {
+          blocked = b;
+          if (blocked)
+              document.getElementById(name).setAttribute("disabled","disabled");
+          else
+              document.getElementById(name).removeAttribute("disabled");
+      }
+  
+      if (initWs()) {
+          console.log("Websocket initialized");
+  
+          document.getElementById("start").onclick = function (evt) {
+              if (ws)
+                  ws.send("start");
+          }
+      
+          document.getElementById("stop").onclick = function (evt) {
+              if (ws)
+                  ws.send("stop");
+          }
+  
+          document.getElementById("reset").onclick = function (evt) {
+              if (ws)
+                  ws.send("reset");
+              setTime(0);
+          }
+  
+          registerControl('hours');
+          registerControl('minutes');
+          registerControl('seconds');
+      
+      } else {
+          showError("Websocket error");
+      }
+      
+  
+  </script>
