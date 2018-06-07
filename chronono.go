@@ -67,7 +67,7 @@ var url string
 
 func reset() {
 	offset = 0
-	hub.broadcast <- []byte("time=0")
+	broadcast("time=0")
 	log.Print("Reset defaults")
 	systray.SetTitle(fmtDuration(time.Duration(0) * time.Millisecond))
 }
@@ -109,8 +109,7 @@ func main() {
 	go midiDevicesScan(midistart, midistop, midireset)
 	job, inserted := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
 		if startTime > 0 {
-			var msg = []byte("time=" + strconv.FormatInt(offset, 10))
-			hub.broadcast <- msg
+			broadcast("time=" + strconv.FormatInt(offset, 10))
 		}
 	})
 	if !inserted {

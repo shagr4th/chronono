@@ -120,9 +120,7 @@ func (c *Client) readPump() {
 			if startTime == 0 {
 				LogPrint("Set server time to " + strconv.Itoa(int(i/1000)) + " seconds")
 				offset = i
-				go func() {
-					hub.broadcast <- []byte("time=" + strconv.FormatInt(offset, 10))
-				}()
+				broadcast("time=" + strconv.FormatInt(offset, 10))
 			}
 		}
 
