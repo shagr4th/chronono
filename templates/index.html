@@ -8,7 +8,13 @@
     textarea {
         background: #303030;
         color: gray;
-        border: 0px;
+        border: none;
+        overflow: auto;
+        outline: none;
+
+        -webkit-box-shadow: none;
+        -moz-box-shadow: none;
+        box-shadow: none;
     }
     
       .progress {
@@ -132,7 +138,7 @@
 
   <div class="clock">
 
-    <textarea id="logs" rows="5" style="width: 600px"></textarea> 
+    <textarea id="logs" rows="5" style="width: 600px" disabled></textarea> 
   </div>
   <div class="clock">
     <input id="clear" type="button" class="button-sm" value="Clear" />

@@ -90,6 +90,7 @@ func (c *Client) readPump() {
 		}
 		s := string(message)
 		if s == "reset" {
+			LogPrint("Reset server time to 0 seconds")
 			reset()
 		} else if s == "start" {
 			start()
@@ -103,7 +104,7 @@ func (c *Client) readPump() {
 				break
 			}
 			if startTime == 0 {
-				LogPrint("Server time set to " + strconv.Itoa(int(i/1000)) + " seconds")
+				LogPrint("Set server time to " + strconv.Itoa(int(i/1000)) + " seconds")
 				offset = i
 				go func() {
 					hub.broadcast <- []byte("time=" + strconv.FormatInt(offset, 10))
