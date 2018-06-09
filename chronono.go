@@ -121,7 +121,7 @@ func linkListener(url string, mLink systray.MenuItem) {
 func setupSystray(url string) {
 
 	systray.SetTitle(fmtDuration(0))
-	systray.SetIcon(MyArray)
+	systray.SetIcon(TrayIcon)
 	systray.SetTooltip("Chronono")
 	mLink := systray.AddMenuItem("Chronono", "Launch browser page")
 	go linkListener(url, *mLink)
