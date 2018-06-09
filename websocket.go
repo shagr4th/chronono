@@ -1,8 +1,10 @@
 package main
 
 import (
+	"github.com/gobuffalo/packr"
 	"github.com/gorilla/websocket"
 	"log"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -56,11 +58,11 @@ func (h *Hub) run() {
 	for {
 		select {
 		case client := <-h.register:
-			LogPrintf("Opened client connection: %s", client.conn.RemoteAddr().String())
+			LogPrintf("Opened web connection from: %s", client.conn.RemoteAddr().String())
 			h.clients[client] = true
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
-				LogPrintf("Closed client connection: %s", client.conn.RemoteAddr().String())
+				LogPrintf("Closed web connection from: %s", client.conn.RemoteAddr().String())
 				delete(h.clients, client)
 				close(client.send)
 			}
@@ -77,7 +79,7 @@ func (h *Hub) run() {
 	}
 }
 
-func serveWs(w http.ResponseWriter, r *http.Request) {
+func serveWS(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
 		log.Print(err)
@@ -152,4 +154,33 @@ func (c *Client) writePump() {
 			}
 		}
 	}
+}
+
+// GetLocalIP returns the non loopback local IP of the host
+func GetLocalIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	for _, address := range addrs {
+		// check the address type and if it is not a loopback the display it
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+	return ""
+}
+
+func serveHTTP(host string, port string) {
+	go hub.run()
+
+	box := packr.NewBox("./templates")
+
+	http.HandleFunc("/time", serveWS)
+	http.Handle("/", http.FileServer(box))
+
+	log.Printf("Serving on %s", "http://"+host+":"+port)
+	log.Fatal(http.ListenAndServe(host+":"+port, nil))
 }

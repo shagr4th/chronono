@@ -93,3 +93,67 @@ func midiDevicesScan(midistart *string, midistop *string, midireset *string) {
 	}
 
 }
+
+func midiOutputStartTest() {
+	midiDefaultOutput, err := rtmidi.NewMIDIOutDefault()
+
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	outputPort := -1
+	portCount, err := midiDefaultOutput.PortCount()
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	for i := 0; i < portCount; i++ {
+		inp, err := midiDefaultOutput.PortName(i)
+		if err != nil {
+			log.Print(err)
+			continue
+		}
+		if strings.Contains(strings.ToLower(inp), "chronono") {
+			outputPort = i
+			log.Printf("Found virtual output : %s (%d)", inp, i)
+			break
+		}
+
+	}
+
+	defer func() {
+		log.Print("Closing output device")
+		midiDefaultOutput.Close()
+	}()
+
+	if outputPort == -1 {
+		return
+	}
+
+	time.Sleep(time.Duration(500 * time.Millisecond))
+
+	err = midiDefaultOutput.OpenPort(outputPort, "")
+	if err != nil {
+		log.Print(err)
+		return
+	}
+
+	data, err := hex.DecodeString("903C7F")
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	midiDefaultOutput.SendMessage(data)
+
+	time.Sleep(time.Duration(500 * time.Millisecond))
+
+	data, err = hex.DecodeString("903C00")
+	if err != nil {
+		log.Print(err)
+		return
+	}
+	midiDefaultOutput.SendMessage(data)
+
+}

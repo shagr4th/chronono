@@ -5,34 +5,14 @@ import (
 	"fmt"
 	"github.com/alex023/clock"
 	"github.com/getlantern/systray"
-	"github.com/gobuffalo/packr"
 	"github.com/zserge/webview"
 	"log"
 	"math"
-	"net"
-	"net/http"
 	"os/exec"
 	"runtime"
 	"strconv"
 	"time"
 )
-
-// GetLocalIP returns the non loopback local IP of the host
-func GetLocalIP() string {
-	addrs, err := net.InterfaceAddrs()
-	if err != nil {
-		return ""
-	}
-	for _, address := range addrs {
-		// check the address type and if it is not a loopback the display it
-		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-			if ipnet.IP.To4() != nil {
-				return ipnet.IP.String()
-			}
-		}
-	}
-	return ""
-}
 
 func makeTimestamp() int64 {
 	return time.Now().UnixNano() / (int64(time.Millisecond) / int64(time.Nanosecond))
@@ -60,10 +40,8 @@ func LogPrint(v ...interface{}) {
 }
 
 var startTime int64
-var localIP = GetLocalIP()
 var offset int64
-var myClock = clock.NewClock()
-var url string
+var oldOffset int64 = -1
 
 func reset() {
 	offset = 0
@@ -88,32 +66,29 @@ func stop() {
 
 func main() {
 
-	box := packr.NewBox("./templates")
-
+	host := flag.String("h", GetLocalIP(), "http host to serve on")
 	port := flag.String("p", "8811", "http port to serve on")
 	midistart := flag.String("midistart", "(BF7F7F)|(FA).*", "MIDI regex for clock start")
 	midistop := flag.String("midistop", "(BF7F00)|(FC).*", "MIDI regex for clock stop")
 	midireset := flag.String("midireset", "FF.*", "MIDI regex for clock reset")
 	flag.Parse()
 
-	url = "http://" + localIP + ":" + *port
-
-	http.Handle("/", http.FileServer(box))
-
-	go hub.run()
-	http.HandleFunc("/time", serveWs)
-	go func() {
-		log.Printf("Serving on %s", url)
-		log.Fatal(http.ListenAndServe(localIP+":"+*port, nil))
-	}()
+	go serveHTTP(*host, *port)
 	go midiDevicesScan(midistart, midistop, midireset)
-	job, inserted := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
+	myClock := clock.NewClock()
+	job, ok := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
 		if startTime > 0 {
 			broadcast("time=" + strconv.FormatInt(offset, 10))
+			offset = makeTimestamp() - startTime
+		}
+
+		if math.Floor(float64(oldOffset)/1000) != math.Floor(float64(offset)/1000) {
+			systray.SetTitle(fmtDuration(time.Duration(offset) * time.Millisecond))
+			oldOffset = offset
 		}
 	})
-	if !inserted {
-		log.Println("failure")
+	if !ok {
+		log.Println("Fail to start timer")
 	}
 	defer job.Cancel()
 	w := webview.New(webview.Settings{
@@ -121,10 +96,12 @@ func main() {
 		Height:    600,
 		Title:     "Chronono",
 		Resizable: true,
-		URL:       url,
+		URL:       "http://" + *host + ":" + *port,
 	})
 	defer w.Exit()
-	systray.Run(setupSystray, func() {
+	systray.Run(func() {
+		setupSystray("http://" + *host + ":" + *port)
+	}, func() {
 		w.Exit()
 	})
 	w.Run()
@@ -141,8 +118,9 @@ func linkListener(url string, mLink systray.MenuItem) {
 	linkListener(url, mLink)
 }
 
-func setupSystray() {
+func setupSystray(url string) {
 
+	systray.SetTitle(fmtDuration(0))
 	systray.SetIcon(MyArray)
 	systray.SetTooltip("Chronono")
 	mLink := systray.AddMenuItem("Chronono", "Launch browser page")
@@ -155,17 +133,5 @@ func setupSystray() {
 		systray.Quit()
 		log.Println("Finished quitting")
 	}()
-
-	var oldOffset int64 = -1
-	myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
-		if startTime > 0 {
-			offset = makeTimestamp() - startTime
-		}
-
-		if math.Floor(float64(oldOffset)/1000) != math.Floor(float64(offset)/1000) {
-			systray.SetTitle(fmtDuration(time.Duration(offset) * time.Millisecond))
-			oldOffset = offset
-		}
-	})
 
 }
