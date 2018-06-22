@@ -66,14 +66,16 @@ func stop() {
 
 func main() {
 
-	host := flag.String("h", GetLocalIP(), "http host to serve on")
+	host := flag.String("h", GetLocalIP(), "network host to serve on")
 	port := flag.String("p", "8811", "http port to serve on")
+	osc := flag.String("o", "8812", "osc port to serve on")
 	midistart := flag.String("midistart", "(BF7F7F)|(FA).*", "MIDI regex for clock start")
 	midistop := flag.String("midistop", "(BF7F00)|(FC).*", "MIDI regex for clock stop")
 	midireset := flag.String("midireset", "FF.*", "MIDI regex for clock reset")
 	flag.Parse()
 
 	go serveHTTP(*host, *port)
+	go serveOSC(*host, *osc)
 	go midiDevicesScan(midistart, midistop, midireset)
 	myClock := clock.NewClock()
 	job, ok := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {

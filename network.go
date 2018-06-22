@@ -181,6 +181,6 @@ func serveHTTP(host string, port string) {
 	http.HandleFunc("/time", serveWS)
 	http.Handle("/", http.FileServer(box))
 
-	log.Printf("Serving on %s", "http://"+host+":"+port)
+	log.Printf("Serving HTTP on %s", "http://"+host+":"+port)
 	log.Fatal(http.ListenAndServe(host+":"+port, nil))
 }

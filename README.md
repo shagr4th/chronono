@@ -9,9 +9,9 @@ Usage of ./chronono:
   -midireset string
         MIDI regex for clock reset (default "FF.*")
   -midistart string
-        MIDI regex for clock start (default "FA.*")
+        MIDI regex for clock start (default "(BF7F7F)|(FA).*")
   -midistop string
-        MIDI regex for clock stop (default "FC.*")
+        MIDI regex for clock stop (default "(BF7F00)|(FC).*")
   -p string
         http port to serve on (default "8811")
 ```
