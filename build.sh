@@ -4,7 +4,8 @@ $GOPATH/bin/packr && go build -ldflags="-s -w"
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
     #brew install upx
-    upx chronono
+    #disabled for the time being : https://github.com/upx/upx/issues/222
+    #upx chronono
     rm -rf chronono.app
     mkdir chronono.app
     mkdir chronono.app/Contents
