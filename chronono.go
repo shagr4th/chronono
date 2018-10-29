@@ -3,15 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/alex023/clock"
-	"github.com/getlantern/systray"
-	"github.com/zserge/webview"
 	"log"
 	"math"
 	"os/exec"
 	"runtime"
 	"strconv"
 	"time"
+
+	"github.com/alex023/clock"
+	"github.com/getlantern/systray"
+	"github.com/zserge/webview"
 )
 
 func makeTimestamp() int64 {
@@ -43,11 +44,14 @@ var startTime int64
 var offset int64
 var oldOffset int64 = -1
 
-func reset() {
-	offset = 0
-	broadcast("time=0")
-	log.Print("Reset defaults")
-	systray.SetTitle(fmtDuration(time.Duration(0) * time.Millisecond))
+func reset(newOffsetMilliseconds int64) {
+	offset = newOffsetMilliseconds
+	if offset < 0 {
+		offset = 0
+	}
+	broadcast("time=" + strconv.Itoa(int(offset)))
+	log.Printf("Reset %d", offset)
+	systray.SetTitle(fmtDuration(time.Duration(offset)))
 }
 
 func start() {
@@ -64,19 +68,21 @@ func stop() {
 	}
 }
 
+func incrementTime(secondes int64) {
+	if startTime == 0 {
+		reset(offset + secondes*1000)
+	}
+}
+
 func main() {
 
 	host := flag.String("h", GetLocalIP(), "network host to serve on")
 	port := flag.String("p", "8811", "http port to serve on")
 	osc := flag.String("o", "8812", "osc port to serve on")
-	midistart := flag.String("midistart", "(BF7F7F)|(FA).*", "MIDI regex for clock start")
-	midistop := flag.String("midistop", "(BF7F00)|(FC).*", "MIDI regex for clock stop")
-	midireset := flag.String("midireset", "FF.*", "MIDI regex for clock reset")
 	flag.Parse()
 
 	go serveHTTP(*host, *port)
 	go serveOSC(*host, *osc)
-	go midiDevicesScan(midistart, midistop, midireset)
 	myClock := clock.NewClock()
 	job, ok := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
 		if startTime > 0 {

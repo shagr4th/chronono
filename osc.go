@@ -1,9 +1,12 @@
 package main
 
 import (
-	"github.com/hypebeast/go-osc/osc"
 	"log"
 	"net"
+	"regexp"
+	"strings"
+
+	"github.com/hypebeast/go-osc/osc"
 )
 
 func serveOSC(host string, port string) {
@@ -44,13 +47,22 @@ func serveOSC(host string, port string) {
 
 func manageOSCMessage(message *osc.Message) {
 	LogPrint("Received OSC message : " + message.String())
-	if message.String() == "/chronono_start ,f 1" {
+	startMsg, _ := regexp.MatchString("/chronono_start.*(1)|(true)", message.String())
+	stopMsg, _ := regexp.MatchString("/chronono_st(op)|(art.*0)|(art.*false)", message.String())
+	resetMsg, _ := regexp.MatchString("/chronono_reset.*", message.String())
+	if startMsg {
 		start()
-	}
-	if message.Address == "/chronono_stop" || message.String() == "/chronono_start ,f 0" {
+	} else if stopMsg {
 		stop()
-	}
-	if message.Address == "/chronono_reset" {
-		reset()
+	} else if resetMsg {
+		reset(0)
+	} else if strings.HasPrefix(message.Address, "/inc10") {
+		incrementTime(600)
+	} else if strings.HasPrefix(message.Address, "/inc") {
+		incrementTime(60)
+	} else if strings.HasPrefix(message.Address, "/dec10") {
+		incrementTime(-600)
+	} else if strings.HasPrefix(message.Address, "/dec") {
+		incrementTime(-60)
 	}
 }

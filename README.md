@@ -1,21 +1,3 @@
 ## Chronono
 
 Centralized timer on a local and offline network, with a midi trigger, to learn a bit about go
-
-## Usage
-
-```
-Usage of ./chronono:
-  -midireset string
-        MIDI regex for clock reset (default "FF.*")
-  -midistart string
-        MIDI regex for clock start (default "(BF7F7F)|(FA).*")
-  -midistop string
-        MIDI regex for clock stop (default "(BF7F00)|(FC).*")
-  -p string
-        http port to serve on (default "8811")
-```
-
-## Screenshot
-
-<img src="screenshot.png"/>

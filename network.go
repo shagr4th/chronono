@@ -1,13 +1,14 @@
 package main
 
 import (
-	"github.com/gobuffalo/packr"
-	"github.com/gorilla/websocket"
 	"log"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
+
+	"github.com/gobuffalo/packr"
+	"github.com/gorilla/websocket"
 )
 
 // Client connection
@@ -107,7 +108,7 @@ func (c *Client) readPump() {
 		s := string(message)
 		if s == "reset" {
 			LogPrint("Reset server time to 0 seconds")
-			reset()
+			reset(0)
 		} else if s == "start" {
 			start()
 		} else if s == "stop" {
