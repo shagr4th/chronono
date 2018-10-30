@@ -100,8 +100,8 @@ func main() {
 	}
 	defer job.Cancel()
 	w := webview.New(webview.Settings{
-		Width:     1024,
-		Height:    600,
+		Width:     480,
+		Height:    620,
 		Title:     "Chronono",
 		Resizable: true,
 		URL:       "http://" + *host + ":" + *port,

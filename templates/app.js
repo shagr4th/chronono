@@ -5,6 +5,7 @@ var hours = 0, minutes = 0, seconds = 0;
 var blocked = false;
 
 function setControlValue(name, value, max, nows) {
+    console.log(name + ' = ' + value); 
     var control_value = document.getElementById(name + '_value');
     var control_text_value = document.getElementById(name + '_text');
 
@@ -39,16 +40,17 @@ function registerControl(name) {
     var control = document.getElementById(name + '_control');
     var control_value = document.getElementById(name + '_value');
 
-    control.addEventListener('click', function (event) {
-        if (blocked)
-            return;
-        var deltaX = event.offsetX - 120;
-        var deltaY = event.offsetY - 120;
+    if (control)
+        control.addEventListener('click', function (event) {
+            if (blocked)
+                return;
+            var deltaX = event.offsetX - 120;
+            var deltaY = event.offsetY - 120;
 
-        var value = Math.floor(calculateAngle(deltaY, deltaX) / (name == 'hours' ? 30 : 6));
+            var value = Math.floor(calculateAngle(deltaY, deltaX) / (name == 'hours' ? 30 : 6));
 
-        setControlValue(name, value, name == 'hours' ? 12 : 60, false);
-    });
+            setControlValue(name, value, name == 'hours' ? 12 : 60, false);
+        });
     control_value.style.strokeDasharray = CIRCUMFERENCE;
     control_value.style.strokeDashoffset = CIRCUMFERENCE;
 }
@@ -95,10 +97,11 @@ function showError(title) {
 }
 
 function setTime(time) {
+    console.log('time = ' + time);
     var h = Math.floor(time / 3600);
     setControlValue('hours', h, 12, true);
     setControlValue('minutes', Math.floor((time - h * 3600) / 60), 60, true);
-    setControlValue('seconds', time % 60, 60, true);
+    //setControlValue('seconds', time % 60, 60, true);
 }
 
 function setControlStatus(b, name) {
@@ -133,7 +136,7 @@ if (initWs()) {
 
     registerControl('hours');
     registerControl('minutes');
-    registerControl('seconds');
+    //registerControl('seconds');
 
 } else {
     showError("Websocket error");

@@ -34,19 +34,32 @@ textarea {
 }
 
 .clock {
-    display: block;
-    margin: auto;
-    text-align: center;
+    display: flex;
+    flex-direction: column;
     font-family: Helvetica;
+    flex: 1 0 auto;
+    align-items: center;
 }
 
 .clockdiv{
-    display: inline-block;
+    display: flex;
+    flex-direction: row;
+    flex: 1 0 auto;
     text-align: center;
+    align-items: center;
 }
 
-.control {
-    width: 200px
+.clockdiv svg {
+    width: 100%;
+}
+
+.buttons{
+    display: flex;
+    flex-direction: row;
+    flex: 1 0 auto;
+    flex-wrap: wrap;
+    text-align: center;
+    align-items: center;
 }
 
 .button {

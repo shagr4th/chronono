@@ -12,5 +12,7 @@
 	<true/>
 	<key>LSUIElement</key>
 	<true/>
+	<key>LSMinimumSystemVersion</key>
+	<string>10.11.0</string>
 </dict>
 </plist>
