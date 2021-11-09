@@ -12,7 +12,7 @@ import (
 
 	"github.com/alex023/clock"
 	"github.com/getlantern/systray"
-	"github.com/zserge/webview"
+	"github.com/webview/webview"
 )
 
 func makeTimestamp() int64 {
