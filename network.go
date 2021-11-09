@@ -59,11 +59,11 @@ func (h *Hub) run() {
 	for {
 		select {
 		case client := <-h.register:
-			LogPrintf("Opened web connection from: %s", client.conn.RemoteAddr().String())
+			LogPrintf("Opened web connection to Chronono %s from: %s", version, client.conn.RemoteAddr().String())
 			h.clients[client] = true
 		case client := <-h.unregister:
 			if _, ok := h.clients[client]; ok {
-				LogPrintf("Closed web connection from: %s", client.conn.RemoteAddr().String())
+				LogPrintf("Closed web connection to Chronono %s from: %s", version, client.conn.RemoteAddr().String())
 				delete(h.clients, client)
 				close(client.send)
 			}

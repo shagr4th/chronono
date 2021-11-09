@@ -44,6 +44,7 @@ var startTime int64
 var offset int64
 var oldOffset int64 = -1
 var gui bool
+var version = "0.9.0"
 
 func reset(newOffsetMilliseconds int64) {
 	offset = newOffsetMilliseconds
@@ -115,7 +116,7 @@ func main() {
 		w := webview.New(webview.Settings{
 			Width:     480,
 			Height:    620,
-			Title:     "Chronono",
+			Title:     "Chronono " + version,
 			Resizable: true,
 			URL:       "http://" + *host + ":" + *port,
 		})
