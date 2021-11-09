@@ -43,6 +43,7 @@ func LogPrint(v ...interface{}) {
 var startTime int64
 var offset int64
 var oldOffset int64 = -1
+var gui bool
 
 func reset(newOffsetMilliseconds int64) {
 	offset = newOffsetMilliseconds
@@ -51,7 +52,9 @@ func reset(newOffsetMilliseconds int64) {
 	}
 	broadcast("time=" + strconv.Itoa(int(offset)))
 	log.Printf("Reset %d", offset)
-	systray.SetTitle(fmtDuration(time.Duration(offset)))
+	if gui {
+		systray.SetTitle(fmtDuration(time.Duration(offset)))
+	}
 }
 
 func start() {
@@ -79,9 +82,13 @@ func main() {
 	host := flag.String("h", GetLocalIP(), "network host to serve on")
 	port := flag.String("p", "8811", "http port to serve on")
 	osc := flag.String("o", "8812", "osc port to serve on")
+	g := flag.Bool("g", true, "launch native gui")
 	flag.Parse()
+	gui = *g
 
-	go serveHTTP(*host, *port)
+	if gui {
+		go serveHTTP(*host, *port)
+	}
 	go serveOSC(*host, *osc)
 	myClock := clock.NewClock()
 	job, ok := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
@@ -91,7 +98,9 @@ func main() {
 		}
 
 		if math.Floor(float64(oldOffset)/1000) != math.Floor(float64(offset)/1000) {
-			systray.SetTitle(fmtDuration(time.Duration(offset) * time.Millisecond))
+			if gui {
+				systray.SetTitle(fmtDuration(time.Duration(offset) * time.Millisecond))
+			}
 			oldOffset = offset
 		}
 	})
@@ -99,20 +108,25 @@ func main() {
 		log.Println("Fail to start timer")
 	}
 	defer job.Cancel()
-	w := webview.New(webview.Settings{
-		Width:     480,
-		Height:    620,
-		Title:     "Chronono",
-		Resizable: true,
-		URL:       "http://" + *host + ":" + *port,
-	})
-	defer w.Exit()
-	systray.Run(func() {
-		setupSystray("http://" + *host + ":" + *port)
-	}, func() {
-		w.Exit()
-	})
-	w.Run()
+	if !gui {
+		serveHTTP(*host, *port)
+	} else {
+		// needs to be on the main thread
+		w := webview.New(webview.Settings{
+			Width:     480,
+			Height:    620,
+			Title:     "Chronono",
+			Resizable: true,
+			URL:       "http://" + *host + ":" + *port,
+		})
+		defer w.Exit()
+		systray.Run(func() {
+			setupSystray("http://" + *host + ":" + *port)
+		}, func() {
+			w.Exit()
+		})
+		w.Run()
+	}
 }
 
 func setupSystray(url string) {
