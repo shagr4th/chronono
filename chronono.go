@@ -115,31 +115,30 @@ func main() {
 	w.Run()
 }
 
-func linkListener(url string, mLink systray.MenuItem) {
-	<-mLink.ClickedCh
-	switch runtime.GOOS {
-	case "linux":
-		_ = exec.Command("xdg-open", url).Start()
-	case "windows", "darwin":
-		_ = exec.Command("open", url).Start()
-	}
-	linkListener(url, mLink)
-}
-
 func setupSystray(url string) {
 
 	systray.SetTitle(fmtDuration(0))
 	systray.SetIcon(TrayIcon)
 	systray.SetTooltip("Chronono")
 	mLink := systray.AddMenuItem("Chronono", "Launch browser page")
-	go linkListener(url, *mLink)
 	systray.AddSeparator()
 	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
 	go func() {
-		<-mQuit.ClickedCh
-		log.Println("Requesting quit")
-		systray.Quit()
-		log.Println("Finished quitting")
+		for {
+			select {
+			case <-mLink.ClickedCh:
+				switch runtime.GOOS {
+				case "linux":
+					_ = exec.Command("xdg-open", url).Start()
+				case "windows", "darwin":
+					_ = exec.Command("open", url).Start()
+				}
+			case <-mQuit.ClickedCh:
+				log.Println("Requesting quit")
+				systray.Quit()
+				log.Println("Finished quitting")
+			}
+		}
 	}()
 
 }

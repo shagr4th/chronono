@@ -141,18 +141,16 @@ func (c *Client) writePump() {
 		}
 	}
 	for {
-		select {
-		case message, ok := <-c.send:
-			if !ok {
-				// The hub closed the channel.
-				c.conn.WriteMessage(websocket.CloseMessage, []byte{})
-				return
-			}
+		message, ok := <-c.send
+		if !ok {
+			// The hub closed the channel.
+			c.conn.WriteMessage(websocket.CloseMessage, []byte{})
+			return
+		}
 
-			err := c.conn.WriteMessage(websocket.TextMessage, message)
-			if err != nil {
-				return
-			}
+		err := c.conn.WriteMessage(websocket.TextMessage, message)
+		if err != nil {
+			return
 		}
 	}
 }

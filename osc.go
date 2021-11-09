@@ -28,15 +28,15 @@ func serveOSC(host string, port string) {
 		}
 
 		if packet != nil {
-			switch packet.(type) {
+			switch packet := packet.(type) {
 			default:
 				LogPrint("OSC : Unknow packet type!")
 
 			case *osc.Message:
-				manageOSCMessage(packet.(*osc.Message))
+				manageOSCMessage(packet)
 
 			case *osc.Bundle:
-				bundle := packet.(*osc.Bundle)
+				bundle := packet
 				for _, message := range bundle.Messages {
 					manageOSCMessage(message)
 				}

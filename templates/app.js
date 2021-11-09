@@ -66,7 +66,10 @@ function initWs() {
     ws.onclose = function (evt) {
         console.log("CLOSE");
         ws = null;
-        showError("Server lost");
+        showError("Server lost. Will try to reconnect in 1 second...");
+        setTimeout(function() {
+            initWs();
+          }, 1000);
     }
     ws.onmessage = function (evt) {
         if (evt.data && evt.data.lastIndexOf('time=', 0) === 0) {
@@ -79,6 +82,7 @@ function initWs() {
     }
     ws.onerror = function (evt) {
         showError("ERROR: " + evt.data);
+        if (ws) ws.close();
     }
     return true;
 }

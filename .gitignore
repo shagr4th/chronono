@@ -2,3 +2,4 @@ chronono
 chronono.app
 debug
 main-packr.go
+.DS_Store
