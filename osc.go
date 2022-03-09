@@ -4,7 +4,7 @@ import (
 	"log"
 	"net"
 	"regexp"
-	"strings"
+	"strconv"
 
 	"github.com/hypebeast/go-osc/osc"
 )
@@ -45,6 +45,30 @@ func serveOSC(host string, port string) {
 	}
 }
 
+func getTimeSkip(message string) int64 {
+	/*
+		/incX : incrément de X minutes (si X n'est pas défini, 1 minute par défaut)
+		/decX : décrement de X minutes (si X n'est pas défini, 1 minute par défaut)
+		/incXs : si le message se termine par 's', on gère des secondes et non des minutes
+	*/
+	timeSkipRegex := regexp.MustCompile("/((inc)|(dec))([0-9]*)(s|m)?")
+	match := timeSkipRegex.FindStringSubmatch(message)
+	skip := int64(0)
+	if len(match) == 6 {
+		skip = int64(1)
+		if len(match[4]) > 0 {
+			skip, _ = strconv.ParseInt(match[4], 10, 64)
+		}
+		if match[5] != "s" {
+			skip = skip * 60
+		}
+		if match[1] == "dec" {
+			skip = -skip
+		}
+	}
+	return skip
+}
+
 func manageOSCMessage(message *osc.Message) {
 	LogPrint("Received OSC message : " + message.String())
 	startMsg, _ := regexp.MatchString("/chronono_start.*(1)|(true)", message.String())
@@ -56,13 +80,10 @@ func manageOSCMessage(message *osc.Message) {
 		stop()
 	} else if resetMsg {
 		reset(0)
-	} else if strings.HasPrefix(message.Address, "/inc10") {
-		incrementTime(600)
-	} else if strings.HasPrefix(message.Address, "/inc") {
-		incrementTime(60)
-	} else if strings.HasPrefix(message.Address, "/dec10") {
-		incrementTime(-600)
-	} else if strings.HasPrefix(message.Address, "/dec") {
-		incrementTime(-60)
+	} else {
+		var timeSkip = getTimeSkip(message.Address)
+		if timeSkip != 0 {
+			incrementTime(timeSkip)
+		}
 	}
 }
