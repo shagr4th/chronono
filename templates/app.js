@@ -21,8 +21,14 @@ function setControlValue(name, value, max, nows) {
         minutes = value;
     if (name == 'seconds')
         seconds = value;
-    if (!nows && ws)
+    if (!nows)
+        sendTimeToBackend();
+}
+
+function sendTimeToBackend() {
+    if (ws) {
         ws.send("time=" + 1000 * Math.floor(hours * 3600 + minutes * 60 + seconds));
+    }
 }
 
 function calculateAngle(x, y) {
@@ -127,6 +133,27 @@ if (initWs()) {
     document.getElementById("clear").onclick = function (evt) {
         document.getElementById("logs").value = "";
     }
+
+    var addTimeFunction = function(delta) {
+        return function (evt) {
+            if (ws) {
+                seconds += delta;
+                if ((hours * 3600 + minutes * 60 + seconds) < 0) {
+                    hours = 0;
+                    minutes = 0;
+                    seconds = 0;
+                }
+                sendTimeToBackend();
+            }
+        }
+    }
+
+    document.getElementById("dec60").onclick = addTimeFunction(-60);
+    document.getElementById("dec10").onclick = addTimeFunction(-10);
+    document.getElementById("dec1").onclick = addTimeFunction(-1);
+    document.getElementById("inc1").onclick = addTimeFunction(1);
+    document.getElementById("inc10").onclick = addTimeFunction(10);
+    document.getElementById("inc60").onclick = addTimeFunction(60);
 
     registerControl('hours');
     registerControl('minutes');

@@ -1,5 +1,5 @@
-chronono
-chronono.app
+chronono*
+!chronono.go
 debug
 main-packr.go
 .DS_Store

@@ -79,7 +79,8 @@ textarea {
     background-color: black;
     color: white;
     border: 0px solid #A0A0A0;
-    padding: 6px 16px;
+    height: 40px;
+    padding: 4px 12px;
     text-align: center;
     text-decoration: none;
     display: inline-block;
