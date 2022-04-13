@@ -44,7 +44,7 @@ var startTime int64
 var offset int64
 var oldOffset int64 = -1
 var gui bool
-var version = "0.9.0"
+var version = "0.10.0"
 
 func reset(newOffsetMilliseconds int64) {
 	offset = newOffsetMilliseconds
