@@ -1,1 +1,1 @@
-$GOPATH/bin/packr && go run *.go
+go run *.go

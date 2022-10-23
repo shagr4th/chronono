@@ -1,13 +1,14 @@
 package main
 
 import (
+	"embed"
+	"io/fs"
 	"log"
 	"net"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/gobuffalo/packr"
 	"github.com/gorilla/websocket"
 )
 
@@ -172,13 +173,18 @@ func GetLocalIP() string {
 	return ""
 }
 
+//go:embed templates/*
+var embededFiles embed.FS
+
 func serveHTTP(host string, port string) {
 	go hub.run()
 
-	box := packr.NewBox("./templates")
-
+	box, err := fs.Sub(embededFiles, "templates")
+	if err != nil {
+		panic(err)
+	}
 	http.HandleFunc("/time", serveWS)
-	http.Handle("/", http.FileServer(box))
+	http.Handle("/", http.FileServer(http.FS(box)))
 
 	log.Printf("Serving HTTP on %s", "http://"+host+":"+port)
 	log.Fatal(http.ListenAndServe(host+":"+port, nil))

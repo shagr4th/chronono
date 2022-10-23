@@ -7,7 +7,7 @@ if [[ "$OSTYPE" == "darwin"* ]]; then
     export CGO_LDFLAGS=-mmacosx-version-min=10.11
 fi
 
-$GOPATH/bin/packr && go build -a -ldflags="-s -w -v -extldflags=-mmacosx-version-min=10.11"
+go build -a -ldflags="-s -w -v -extldflags=-mmacosx-version-min=10.11"
 
 if [[ "$OSTYPE" == "darwin"* ]]; then
     #brew install upx
