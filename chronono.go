@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/alex023/clock"
-	"github.com/getlantern/systray"
+	"github.com/ghostiam/systray"
 	"github.com/webview/webview"
 )
 
@@ -44,7 +44,7 @@ var startTime int64
 var offset int64
 var oldOffset int64 = -1
 var gui bool
-var version = "0.10.0"
+var version = "0.11.0"
 
 func reset(newOffsetMilliseconds int64) {
 	offset = newOffsetMilliseconds
@@ -113,47 +113,41 @@ func main() {
 		serveHTTP(*host, *port)
 	} else {
 		// needs to be on the main thread
-		w := webview.New(webview.Settings{
-			Width:     480,
-			Height:    620,
-			Title:     "Chronono " + version,
-			Resizable: true,
-			URL:       "http://" + *host + ":" + *port,
-		})
-		defer w.Exit()
-		systray.Run(func() {
-			setupSystray("http://" + *host + ":" + *port)
-		}, func() {
-			w.Exit()
-		})
-		w.Run()
-	}
-}
+		w := webview.New(false)
+		defer w.Destroy()
 
-func setupSystray(url string) {
+		w.SetSize(480, 620, webview.HintFixed)
+		w.SetTitle("Chronono " + version)
 
-	systray.SetTitle(fmtDuration(0))
-	systray.SetIcon(TrayIcon)
-	systray.SetTooltip("Chronono")
-	mLink := systray.AddMenuItem("Chronono", "Launch browser page")
-	systray.AddSeparator()
-	mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
-	go func() {
-		for {
-			select {
-			case <-mLink.ClickedCh:
-				switch runtime.GOOS {
-				case "linux":
-					_ = exec.Command("xdg-open", url).Start()
-				case "windows", "darwin":
-					_ = exec.Command("open", url).Start()
+		url := "http://" + *host + ":" + *port
+
+		systray.Register(func() {
+			systray.SetTitle(fmtDuration(0))
+			systray.SetIcon(TrayIcon)
+			systray.SetTooltip("Chronono")
+			mLink := systray.AddMenuItem("Chronono", "Launch browser page")
+			systray.AddSeparator()
+			mQuit := systray.AddMenuItem("Quit", "Quit the whole app")
+			go func() {
+				for {
+					select {
+					case <-mLink.ClickedCh:
+						switch runtime.GOOS {
+						case "linux":
+							_ = exec.Command("xdg-open", url).Start()
+						case "windows", "darwin":
+							_ = exec.Command("open", url).Start()
+						}
+					case <-mQuit.ClickedCh:
+						log.Println("Requesting quit")
+						w.Terminate()
+						log.Println("Finished quitting")
+					}
 				}
-			case <-mQuit.ClickedCh:
-				log.Println("Requesting quit")
-				systray.Quit()
-				log.Println("Finished quitting")
-			}
-		}
-	}()
-
+			}()
+		})
+		w.Navigate(url)
+		w.Run()
+		w.Destroy()
+	}
 }
