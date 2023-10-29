@@ -20,6 +20,9 @@ import (
 //go:embed frontend/dist
 var assets embed.FS
 
+//go:embed build/appicon.png
+var icon []byte
+
 func main() {
 
 	var server = NewChronoServer()
@@ -31,6 +34,7 @@ func main() {
 	app := application.New(application.Options{
 		Name:        "Chronono",
 		LogLevel:    slog.LevelInfo,
+		Icon:        icon,
 		Description: "OSC and HTTP clock control",
 		Assets: application.AssetOptions{
 			FS: assets,
