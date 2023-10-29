@@ -104,6 +104,7 @@ tasks:
 
   create-app-bundle:
     summary: Builds a `.app` bundle
+    platform: darwin
     cmds:
       - mkdir -p {{.APP_NAME}}.app/Contents/{MacOS,Resources}
       - cp build/icons.icns {{.APP_NAME}}.app/Contents/Resources
