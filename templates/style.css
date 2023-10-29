@@ -60,6 +60,7 @@ textarea {
     flex-wrap: wrap;
     text-align: center;
     align-items: center;
+    gap: 10px;
 }
 
 .button {

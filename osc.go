@@ -5,9 +5,12 @@ import (
 	"net"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/hypebeast/go-osc/osc"
 )
+
+var oscClients map[string]*osc.Client = make(map[string]*osc.Client)
 
 func serveOSC(host string, port string) {
 	addr := host + ":" + port
@@ -67,6 +70,29 @@ func getTimeSkip(message string) int64 {
 		}
 	}
 	return skip
+}
+
+func initOscClients(clients string) error {
+	for _, oscClient := range strings.Split(clients, ";") {
+		oscClientHost := oscClient
+		//oscClients[oscClient] = osc.NewClient(oscClientHost, 8765)
+		//msg := osc.NewMessage("/chronono/init")
+		//msg.Append(true)
+		//oscClients[oscClient].Send(msg)
+		LogPrintf("init OSC client: %s", oscClientHost)
+	}
+	return nil
+}
+
+func broadcastOsc(millis int64) {
+	for _, oscClient := range oscClients {
+		msg := osc.NewMessage("/osc/minutes")
+		msg.Append(int32(millis / 60000))
+		oscClient.Send(msg)
+		msg = osc.NewMessage("/osc/seconds")
+		msg.Append(int32((millis / 1000) % 60))
+		oscClient.Send(msg)
+	}
 }
 
 func manageOSCMessage(message *osc.Message) {

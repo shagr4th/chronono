@@ -44,7 +44,7 @@ var startTime int64
 var offset int64
 var oldOffset int64 = -1
 var gui bool
-var version = "0.11.0"
+var version = "0.12.0"
 
 func reset(newOffsetMilliseconds int64) {
 	offset = newOffsetMilliseconds
@@ -95,6 +95,7 @@ func main() {
 	job, ok := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
 		if startTime > 0 {
 			broadcast("time=" + strconv.FormatInt(offset, 10))
+			broadcastOsc(offset)
 			offset = makeTimestamp() - startTime
 		}
 
@@ -116,7 +117,7 @@ func main() {
 		w := webview.New(false)
 		defer w.Destroy()
 
-		w.SetSize(480, 620, webview.HintFixed)
+		w.SetSize(480, 720, webview.HintFixed)
 		w.SetTitle("Chronono " + version)
 
 		url := "http://" + *host + ":" + *port

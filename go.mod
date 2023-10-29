@@ -6,7 +6,7 @@ require (
 	github.com/alex023/clock v0.0.0-20191208111215-c265f1b2ab18
 	github.com/ghostiam/systray v1.3.0
 	github.com/gorilla/websocket v1.4.2
-	github.com/hypebeast/go-osc v0.0.0-20210408213458-3287e1838f40
+	github.com/hypebeast/go-osc v0.0.0-20220308234300-cec5a8a1e5f5
 	github.com/webview/webview v0.0.0-20221206071508-862eb96057ff
 )
 

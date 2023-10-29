@@ -31,6 +31,14 @@ function sendTimeToBackend() {
     }
 }
 
+function saveOscClients() {
+    var oscclients = document.getElementById("oscclients").value;
+    localStorage.setItem("oscclients", oscclients);
+    if (ws && oscclients) {
+        ws.send("clients=" + oscclients);
+    }
+}
+
 function calculateAngle(x, y) {
     var k = Math.abs(y) / Math.abs(x);
     var angle = Math.atan(k) * 180 / Math.PI;
@@ -62,12 +70,15 @@ function initWs() {
     new_uri += "//" + loc.host + loc.pathname + "time";
 
     document.getElementById("info").innerHTML = "Address : " + loc.protocol + "//" + loc.host + loc.pathname;
-
+    document.getElementById("oscclients").value = localStorage.getItem("oscclients");
+    document.getElementById("oscclients").addEventListener("change", saveOscClients);
+    
     ws = new WebSocket(new_uri);
     if (!ws)
         return false;
     ws.onopen = function (evt) {
         console.log("OPEN");
+        saveOscClients();
     }
     ws.onclose = function (evt) {
         console.log("CLOSE");

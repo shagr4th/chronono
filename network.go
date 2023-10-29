@@ -114,6 +114,9 @@ func (c *Client) readPump() {
 			start()
 		} else if s == "stop" {
 			stop()
+		} else if strings.HasPrefix(s, "clients=") {
+			s = strings.TrimPrefix(s, "clients=")
+			initOscClients(s)
 		} else if strings.HasPrefix(s, "time=") {
 			s = strings.TrimPrefix(s, "time=")
 			i, err := strconv.ParseInt(s, 10, 64)
