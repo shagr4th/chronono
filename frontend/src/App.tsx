@@ -98,7 +98,7 @@ function App() {
       <Group justify="end" mt={10} mr={10}>
         <ColorSchemeButton/>
       </Group>
-      <Group justify="center" mt={20}>
+      <Group justify="center">
 
         <RingProgress size={230} thickness={10} roundCaps m={0}
           sections={[{ value: 100 * minutes / 60, color: 'blue' }]}

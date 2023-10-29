@@ -57,7 +57,7 @@ func main() {
 			TitleBar:                application.MacTitleBarHiddenInset,
 		},
 		Width:         480,
-		Height:        720,
+		Height:        640,
 		DisableResize: true,
 		URL:           "/",
 	})
