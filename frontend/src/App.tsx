@@ -94,7 +94,7 @@ function App() {
   }, [])
 
   return (
-    <Flex direction="column" w="100%">
+    <Flex direction="column" w="100%" h="100%">
       <Group justify="end" mt={10} mr={10}>
         <ColorSchemeButton/>
       </Group>
@@ -170,9 +170,22 @@ function App() {
         { info }
       </Notification>}
 
-      <Textarea m={5} value={logs.join('\n')} autosize maxRows={6} minRows={6}></Textarea>
+      <Textarea label="Logs" m={5} value={logs.join('\n')} style={{
+        flexGrow: 1,
+        display: "flex",
+        flexDirection: "column"
+      }} styles={{
+        wrapper: {
+          flexGrow: 1,
+          display: "flex",
+          flexDirection: "column"
+        },
+        input: {
+          flexGrow: 1
+        }
+      }}></Textarea>
 
-      <Button variant="filled" onClick={() => setLogs([])}>Clear</Button>
+      <Button m={5} variant="filled" onClick={() => setLogs([])}>Clear logs</Button>
     </Flex>
   )
 }

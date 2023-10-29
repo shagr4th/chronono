@@ -32,7 +32,7 @@ const theme = createTheme({
   primaryColor: 'mainColor',
 })
 
-ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
+ReactDOM.createRoot(document.body).render(
   <React.StrictMode>
     <MantineProvider defaultColorScheme="auto" theme={theme}>
       <App />
