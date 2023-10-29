@@ -77,10 +77,10 @@ function App() {
         else
           setTime(0)
       } else if (evt.data && evt.data.lastIndexOf('http=', 0) === 0) {
-        setInfo("Browser address : " + evt.data.substring(5));
+        setInfo(evt.data.substring(5));
         setInfoInError(false)
       } else {
-        setLogs((logsRef.current ?? []).concat(evt.data))
+        setLogs((logsRef.current ?? []).concat('[' + new Date().toTimeString().substring(0, 8) + '] ' + evt.data))
       }
     }
     sse.onerror = function (evt) {
@@ -170,7 +170,7 @@ function App() {
         { info }
       </Notification>}
 
-      <Textarea my={10} value={logs.join('\n')} autosize maxRows={4} minRows={4}></Textarea>
+      <Textarea m={5} value={logs.join('\n')} autosize maxRows={6} minRows={6}></Textarea>
 
       <Button variant="filled" onClick={() => setLogs([])}>Clear</Button>
     </Flex>

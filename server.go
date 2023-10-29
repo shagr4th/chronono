@@ -141,8 +141,10 @@ func (server *ChronoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		go func() {
 			time.Sleep(200 * time.Millisecond)
-			server.broadcast("http=http://" + *server.host + ":" + *server.port)
+			server.broadcast("http=http://" + *server.host + ":" + *server.port +
+				", OSC: " + *server.host + ":" + *server.osc)
 			server.broadcast("time=" + strconv.FormatInt(server.offset, 10))
+			server.broadcast("New Client ! " + r.RemoteAddr)
 		}()
 
 		for {
