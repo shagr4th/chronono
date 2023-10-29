@@ -1,3 +1,5 @@
-## Chronono
+WAILS3 APP
 
-Centralized timer on a local and offline network, with a midi trigger, to learn a bit about go
+`go install github.com/wailsapp/wails/v3/cmd/wails@v3-alpha`
+
+![](./screenshot.png)

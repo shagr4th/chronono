@@ -3,3 +3,7 @@ chronono*
 debug
 main-packr.go
 .DS_Store
+node_modules
+.task
+bin
+chronono.app

@@ -5,12 +5,15 @@ import (
 	"net"
 	"regexp"
 	"strconv"
+	"strings"
 
 	"github.com/hypebeast/go-osc/osc"
 )
 
-func serveOSC(host string, port string) {
-	addr := host + ":" + port
+var oscClients map[string]*osc.Client = make(map[string]*osc.Client)
+
+func serveOSC(broker ChronoServer) {
+	addr := *broker.host + ":" + *broker.osc
 	server := &osc.Server{Addr: addr}
 
 	conn, err := net.ListenPacket("udp", addr)
@@ -24,21 +27,21 @@ func serveOSC(host string, port string) {
 	for {
 		packet, err := server.ReceivePacket(conn)
 		if err != nil {
-			LogPrint("OSC Server error: " + err.Error())
+			log.Printf("OSC Server error: " + err.Error())
 		}
 
 		if packet != nil {
 			switch packet := packet.(type) {
 			default:
-				LogPrint("OSC : Unknow packet type!")
+				log.Printf("OSC : Unknow packet type!")
 
 			case *osc.Message:
-				manageOSCMessage(packet)
+				manageOSCMessage(broker, packet)
 
 			case *osc.Bundle:
 				bundle := packet
 				for _, message := range bundle.Messages {
-					manageOSCMessage(message)
+					manageOSCMessage(broker, message)
 				}
 			}
 		}
@@ -69,21 +72,44 @@ func getTimeSkip(message string) int64 {
 	return skip
 }
 
-func manageOSCMessage(message *osc.Message) {
-	LogPrint("Received OSC message : " + message.String())
+func initOscClients(clients string) error {
+	for _, oscClient := range strings.Split(clients, ";") {
+		oscClientHost := oscClient
+		//oscClients[oscClient] = osc.NewClient(oscClientHost, 8765)
+		//msg := osc.NewMessage("/chronono/init")
+		//msg.Append(true)
+		//oscClients[oscClient].Send(msg)
+		log.Printf("init OSC client: %s", oscClientHost)
+	}
+	return nil
+}
+
+func broadcastOsc(millis int64) {
+	for _, oscClient := range oscClients {
+		msg := osc.NewMessage("/osc/minutes")
+		msg.Append(int32(millis / 60000))
+		oscClient.Send(msg)
+		msg = osc.NewMessage("/osc/seconds")
+		msg.Append(int32((millis / 1000) % 60))
+		oscClient.Send(msg)
+	}
+}
+
+func manageOSCMessage(broker ChronoServer, message *osc.Message) {
+	log.Printf("Received OSC message : " + message.String())
 	startMsg, _ := regexp.MatchString("/chronono_start.*(1)|(true)", message.String())
 	stopMsg, _ := regexp.MatchString("/chronono_st(op)|(art.*0)|(art.*false)", message.String())
 	resetMsg, _ := regexp.MatchString("/chronono_reset.*", message.String())
 	if startMsg {
-		start()
+		broker.start()
 	} else if stopMsg {
-		stop()
+		broker.stop()
 	} else if resetMsg {
-		reset(0)
+		broker.reset(0)
 	} else {
 		var timeSkip = getTimeSkip(message.Address)
 		if timeSkip != 0 {
-			incrementTime(timeSkip)
+			broker.incrementTime(timeSkip)
 		}
 	}
 }
