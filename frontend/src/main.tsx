@@ -1,7 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
-import { MantineColorsTuple, MantineProvider, createTheme } from '@mantine/core'
+import { MantineColorsTuple, MantineProvider, createTheme, rem } from '@mantine/core'
 
 
 const mainColor: MantineColorsTuple = [
@@ -21,7 +21,14 @@ const theme = createTheme({
   colors: {
     mainColor: mainColor
   },
-  fontFamily: 'Intel Mono',
+  fontFamily: 'Martian Mono',
+  fontSizes: {
+    xs: rem(10),
+    sm: rem(11),
+    md: rem(14),
+    lg: rem(16),
+    xl: rem(20),
+  },
   primaryColor: 'mainColor',
 })
 

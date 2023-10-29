@@ -1,13 +1,7 @@
 @import '@mantine/core/styles.css';
 
 @font-face {
-    font-family: 'Intel Mono';
-    src: url('/woff2/IntelOneMono-Bold.woff2');
-    font-weight: bold;
-}
-
-@font-face {
-    font-family: 'Intel Mono';
-    src: url('/woff2/IntelOneMono-Regular.woff2');
+    font-family: 'Martian Mono';
+    src: url('/woff2/MartianMono-Regular.woff2');
     font-weight: normal;
 }
