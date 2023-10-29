@@ -63,15 +63,20 @@ func main() {
 	})
 
 	systray := app.NewSystemTray()
+	systray.SetIcon(icon)
 	menu := app.NewMenu()
 	url := "http://" + *server.host + ":" + *server.port
-	menu.Add(url).OnClick(func(ctx *application.Context) {
+	menu.Add("Open " + url).OnClick(func(ctx *application.Context) {
 		switch runtime.GOOS {
 		case "linux":
 			_ = exec.Command("xdg-open", url).Start()
 		case "windows", "darwin":
 			_ = exec.Command("open", url).Start()
 		}
+	})
+	menu.AddSeparator()
+	menu.Add("Quit").OnClick(func(ctx *application.Context) {
+		app.Quit()
 	})
 	systray.SetMenu(menu)
 
