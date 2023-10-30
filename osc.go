@@ -12,9 +12,9 @@ import (
 
 var oscClients map[string]*osc.Client = make(map[string]*osc.Client)
 
-func serveOSC(broker ChronoServer) {
-	addr := *broker.host + ":" + *broker.osc
-	server := &osc.Server{Addr: addr}
+func serveOSC(server ChronoServer) {
+	addr := server.getOSCUrl()
+	oscServer := &osc.Server{Addr: addr}
 
 	conn, err := net.ListenPacket("udp", addr)
 	if err != nil {
@@ -25,7 +25,7 @@ func serveOSC(broker ChronoServer) {
 	log.Printf("Serving OSC on %s", addr)
 
 	for {
-		packet, err := server.ReceivePacket(conn)
+		packet, err := oscServer.ReceivePacket(conn)
 		if err != nil {
 			log.Printf("OSC Server error: " + err.Error())
 		}
@@ -36,12 +36,12 @@ func serveOSC(broker ChronoServer) {
 				log.Printf("OSC : Unknow packet type!")
 
 			case *osc.Message:
-				manageOSCMessage(broker, packet)
+				manageOSCMessage(server, packet)
 
 			case *osc.Bundle:
 				bundle := packet
 				for _, message := range bundle.Messages {
-					manageOSCMessage(broker, message)
+					manageOSCMessage(server, message)
 				}
 			}
 		}
@@ -95,21 +95,21 @@ func broadcastOsc(millis int64) {
 	}
 }
 
-func manageOSCMessage(broker ChronoServer, message *osc.Message) {
+func manageOSCMessage(server ChronoServer, message *osc.Message) {
 	log.Printf("Received OSC message : " + message.String())
 	startMsg, _ := regexp.MatchString("/chronono_start.*(1)|(true)", message.String())
 	stopMsg, _ := regexp.MatchString("/chronono_st(op)|(art.*0)|(art.*false)", message.String())
 	resetMsg, _ := regexp.MatchString("/chronono_reset.*", message.String())
 	if startMsg {
-		broker.start()
+		server.start()
 	} else if stopMsg {
-		broker.stop()
+		server.stop()
 	} else if resetMsg {
-		broker.reset(0)
+		server.reset(0)
 	} else {
 		var timeSkip = getTimeSkip(message.Address)
 		if timeSkip != 0 {
-			broker.incrementTime(timeSkip)
+			server.incrementTime(timeSkip)
 		}
 	}
 }

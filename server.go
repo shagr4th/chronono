@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"net"
 	"net/http"
 	"strconv"
 	"strings"
@@ -103,6 +104,14 @@ func (server *ChronoServer) serverOnRealHTTPProtocol(handler http.Handler) {
 	log.Fatal(http.ListenAndServe(*server.host+":"+*server.port, handler))
 }
 
+func (server *ChronoServer) getHTTPUrl() string {
+	return "http://" + *server.host + ":" + *server.port
+}
+
+func (server *ChronoServer) getOSCUrl() string {
+	return *server.host + ":" + *server.osc
+}
+
 func (server *ChronoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Path == "/sse" {
 
@@ -110,13 +119,13 @@ func (server *ChronoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		flusher, ok := w.(http.Flusher)
 
 		if !ok {
-			log.Println("Streaming unsupported!")
+			log.Println("Flusher unsupported!")
 		}
 
 		w.Header().Set("Content-Type", "text/event-stream")
 		w.Header().Set("Cache-Control", "no-cache")
 		w.Header().Set("Connection", "keep-alive")
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Origin", server.getHTTPUrl())
 
 		// Each connection registers its own message channel with the Broker's connections registry
 		messageChan := make(chan []byte)
@@ -141,9 +150,9 @@ func (server *ChronoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		go func() {
 			time.Sleep(200 * time.Millisecond)
-			server.broadcast("http=http://" + *server.host + ":" + *server.port +
-				", OSC: " + *server.host + ":" + *server.osc)
-			server.broadcast("time=" + strconv.FormatInt(server.offset, 10))
+			server.broadcast("http=" + server.getHTTPUrl() +
+				", OSC: " + server.getOSCUrl())
+			server.broadcastTime()
 			server.broadcast("New Client ! " + r.RemoteAddr)
 		}()
 
@@ -161,13 +170,13 @@ func (server *ChronoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 	} else if r.URL.Path == "/reset" {
 		server.reset(0)
-		server.broadcast("time=" + strconv.FormatInt(server.offset, 10))
+		server.broadcastTime()
 	} else if r.URL.Path == "/start" {
 		server.start()
-		server.broadcast("time=" + strconv.FormatInt(server.offset, 10))
+		server.broadcastTime()
 	} else if r.URL.Path == "/stop" {
 		server.stop()
-		server.broadcast("time=" + strconv.FormatInt(server.offset, 10))
+		server.broadcastTime()
 	} else if r.URL.Path == "/config" && strings.HasPrefix(r.URL.RawQuery, "clients=") {
 		var s = strings.TrimPrefix(r.URL.RawQuery, "clients=")
 		initOscClients(s)
@@ -183,7 +192,7 @@ func (server *ChronoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if server.startTime == 0 {
 			server.LogPrintf("Set server time to " + strconv.Itoa(int(i/1000)) + " seconds")
 			server.offset = i
-			server.broadcast("time=" + strconv.FormatInt(server.offset, 10))
+			server.broadcastTime()
 		}
 	} else {
 		w.WriteHeader(404)
@@ -193,6 +202,10 @@ func (server *ChronoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 func (server *ChronoServer) broadcast(msg string) {
 	server.Notifier <- []byte(msg)
+}
+
+func (server *ChronoServer) broadcastTime() {
+	server.broadcast("time=" + strconv.FormatInt(server.offset, 10))
 }
 
 func (server *ChronoServer) reset(newOffsetMilliseconds int64) {
@@ -224,4 +237,21 @@ func (server *ChronoServer) incrementTime(secondes int64) {
 	if server.startTime == 0 {
 		server.reset(server.offset + secondes*1000)
 	}
+}
+
+// GetLocalIP returns the non loopback local IP of the host
+func (server *ChronoServer) GetLocalIP() string {
+	addrs, err := net.InterfaceAddrs()
+	if err != nil {
+		return ""
+	}
+	for _, address := range addrs {
+		// check the address type and if it is not a loopback the display it
+		if ipnet, ok := address.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
+			if ipnet.IP.To4() != nil {
+				return ipnet.IP.String()
+			}
+		}
+	}
+	return ""
 }
