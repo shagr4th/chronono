@@ -3,6 +3,7 @@ import './App.css'
 import { ActionIcon, Button, Flex, Group, Notification, RingProgress, Text, TextInput, Textarea, useComputedColorScheme, useMantineColorScheme } from '@mantine/core';
 import { IconPlayerPlayFilled, IconPlayerStopFilled, IconRewindForward60, IconRewindForward10, IconArrowForwardUp,
   IconRewindBackward60, IconRewindBackward10, IconArrowBackUp, IconClockHour12, IconSun, IconMoonStars } from '@tabler/icons-react'
+import { useResizeObserver } from '@mantine/hooks';
 
 
 const ColorSchemeButton = () => {
@@ -30,7 +31,7 @@ function App() {
   const [info, setInfo] = useState("")
   const [infoInError, setInfoInError] = useState(false)
   const [time, setTime] = useState(0)
-
+  const [clockRef, { width: clockWidth }] = useResizeObserver<HTMLDivElement>();
   const logsRef = useRef<string[]>();
 
   useEffect(() => {
@@ -98,25 +99,25 @@ function App() {
       <Group justify="end" mt={10} mr={10}>
         <ColorSchemeButton/>
       </Group>
-      <Group justify="center">
+      <Group justify="center" ref={clockRef}>
 
-        <RingProgress size={230} thickness={10} roundCaps m={0}
+      { clockWidth > 100 && <RingProgress size={(clockWidth - 20) / 2} thickness={10} roundCaps m={0}
           sections={[{ value: 100 * minutes / 60, color: 'blue' }]}
           label={
-            <Text fz={96} fw={700} ta="center" size="xl">
+            <Text fz={clockWidth / 5} fw={700} ta="center" size="xl">
               {('0' + Math.floor(minutes)).slice(-2)}
             </Text>
           }
-        />
+        />}
 
-        <RingProgress size={230} thickness={10} roundCaps m={0}
+      { clockWidth > 100 && <RingProgress size={(clockWidth - 20) / 2} thickness={10} roundCaps m={0}
           sections={[{ value: 100 * seconds / 60, color: 'blue' }]}
           label={
-            <Text fz={96}  fw={700} ta="center" size="xl">
+            <Text fz={clockWidth / 5}  fw={700} ta="center" size="xl">
               {('0' + Math.floor(seconds)).slice(-2)}
             </Text>
           }
-        />
+        />}
 
       </Group>
 
