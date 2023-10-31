@@ -37,7 +37,7 @@ func main() {
 		Assets: application.AssetOptions{
 			FS: assets,
 			Middleware: func(next http.Handler) http.Handler {
-				go server.serverOnRealHTTPProtocol(next)
+				go server.startHTTPListener(next)
 				return next
 			},
 			Handler: server,
@@ -55,7 +55,7 @@ func main() {
 			TitleBar:                application.MacTitleBarHiddenInset,
 		},
 		Width:         480,
-		Height:        640,
+		Height:        700,
 		DisableResize: true,
 		URL:           "/",
 	})
@@ -78,12 +78,12 @@ func main() {
 	})
 	systray.SetMenu(menu)
 
-	go serveOSC(*server)
+	go server.oscServe()
 	myClock := clock.NewClock()
 	job, ok := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
 		if server.startTime > 0 {
-			server.broadcastTime()
-			broadcastOsc(server.offset)
+			server.sseBroadcastTime()
+			server.oscBroadcast(server.offset)
 			server.offset = makeTimestamp() - server.startTime
 		}
 

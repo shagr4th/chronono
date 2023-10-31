@@ -10,9 +10,7 @@ import (
 	"github.com/hypebeast/go-osc/osc"
 )
 
-var oscClients map[string]*osc.Client = make(map[string]*osc.Client)
-
-func serveOSC(server ChronoServer) {
+func (server *ChronoServer) oscServe() {
 	addr := server.getOSCUrl()
 	oscServer := &osc.Server{Addr: addr}
 
@@ -72,20 +70,29 @@ func getTimeSkip(message string) int64 {
 	return skip
 }
 
-func initOscClients(clients string) error {
+func (server *ChronoServer) oscInitClients(clients string) error {
+	// TODO: gérer existant et supprimer anciens
 	for _, oscClient := range strings.Split(clients, ";") {
-		oscClientHost := oscClient
-		//oscClients[oscClient] = osc.NewClient(oscClientHost, 8765)
-		//msg := osc.NewMessage("/chronono/init")
-		//msg.Append(true)
-		//oscClients[oscClient].Send(msg)
-		log.Printf("init OSC client: %s", oscClientHost)
+		parts := strings.Split(oscClient, ":")
+		oscPort := 8765
+		if len(parts) > 1 {
+			port, err := strconv.Atoi(parts[1])
+			if err != nil {
+				continue
+			}
+			oscPort = port
+		}
+		server.oscClients[oscClient] = osc.NewClient(parts[0], oscPort)
+		msg := osc.NewMessage("/chronono/init")
+		msg.Append(true)
+		server.oscClients[oscClient].Send(msg)
+		server.LogPrintf("Init OSC client: %s", oscClient)
 	}
 	return nil
 }
 
-func broadcastOsc(millis int64) {
-	for _, oscClient := range oscClients {
+func (server *ChronoServer) oscBroadcast(millis int64) {
+	for _, oscClient := range server.oscClients {
 		msg := osc.NewMessage("/osc/minutes")
 		msg.Append(int32(millis / 60000))
 		oscClient.Send(msg)
@@ -95,17 +102,17 @@ func broadcastOsc(millis int64) {
 	}
 }
 
-func manageOSCMessage(server ChronoServer, message *osc.Message) {
+func manageOSCMessage(server *ChronoServer, message *osc.Message) {
 	log.Printf("Received OSC message : " + message.String())
 	startMsg, _ := regexp.MatchString("/chronono_start.*(1)|(true)", message.String())
 	stopMsg, _ := regexp.MatchString("/chronono_st(op)|(art.*0)|(art.*false)", message.String())
 	resetMsg, _ := regexp.MatchString("/chronono_reset.*", message.String())
 	if startMsg {
-		server.start()
+		server.startTimer()
 	} else if stopMsg {
-		server.stop()
+		server.stopTimer()
 	} else if resetMsg {
-		server.reset(0)
+		server.resetTimer(0)
 	} else {
 		var timeSkip = getTimeSkip(message.Address)
 		if timeSkip != 0 {

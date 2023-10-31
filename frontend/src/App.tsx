@@ -122,48 +122,41 @@ function App() {
       </Group>
 
 
-      {/*<Group justify="center" mt={10}>
-        <TextInput
-          label="Client(s) OSC" value={oscclients || ""} onChange={(evt) =>
-            setOscClients(evt.target.value)
-          }
-        />
-        </Group>*/}
+      
+      <Group justify="space-around" mt={10}>
 
-      <Group justify="center" mt={10}>
-
-        <Button variant="filled" size="lg" onClick={() => fetch("/start")} leftSection={
-          <IconPlayerPlayFilled size={24}></IconPlayerPlayFilled>
-        }>Start</Button>
-        <Button variant="filled" size="lg" onClick={() => fetch("/stop")} leftSection={
-          <IconPlayerStopFilled size={24}></IconPlayerStopFilled>
-        }>Stop</Button>
-        <Button variant="filled" size="lg" onClick={() => fetch("/reset")} leftSection={
-          <IconClockHour12 size={24}></IconClockHour12>
-        }>Reset</Button>
+        <ActionIcon variant="subtle" size="xl" onClick={() => addTimeFunction(-60)}>
+          <IconRewindBackward60 style={{ width: '70%', height: '70%' }} stroke={1.5}></IconRewindBackward60>
+        </ActionIcon>
+        <ActionIcon variant="subtle" size="xl" onClick={() => addTimeFunction(-10)}>
+          <IconRewindBackward10 style={{ width: '70%', height: '70%' }} stroke={1.5}></IconRewindBackward10>
+        </ActionIcon>
+        <ActionIcon variant="subtle"  size="xl" onClick={() => addTimeFunction(-1)}>
+          <IconArrowBackUp style={{ width: '70%', height: '70%' }} stroke={1.5}></IconArrowBackUp>
+        </ActionIcon>
+        <ActionIcon variant="subtle" size="xl"  onClick={() => addTimeFunction(1)}>
+          <IconArrowForwardUp style={{ width: '70%', height: '70%' }} stroke={1.5}></IconArrowForwardUp>
+        </ActionIcon>
+        <ActionIcon variant="subtle" size="xl"  onClick={() => addTimeFunction(10)} >
+          <IconRewindForward10 style={{ width: '70%', height: '70%' }} stroke={1.5}></IconRewindForward10>
+        </ActionIcon>
+        <ActionIcon variant="subtle" size="xl"  onClick={() => addTimeFunction(60)} >
+          <IconRewindForward60 style={{ width: '70%', height: '70%' }} stroke={1.5}></IconRewindForward60>
+        </ActionIcon>
 
       </Group>
 
       <Group justify="center" mt={10}>
 
-        <ActionIcon variant="filled"  size="xl" onClick={() => addTimeFunction(-60)}>
-          <IconRewindBackward60 style={{ width: '70%', height: '70%' }} stroke={1.5}></IconRewindBackward60>
-        </ActionIcon>
-        <ActionIcon variant="filled" size="xl" onClick={() => addTimeFunction(-10)}>
-          <IconRewindBackward10 style={{ width: '70%', height: '70%' }} stroke={1.5}></IconRewindBackward10>
-        </ActionIcon>
-        <ActionIcon variant="filled"  size="xl" onClick={() => addTimeFunction(-1)}>
-          <IconArrowBackUp style={{ width: '70%', height: '70%' }} stroke={1.5}></IconArrowBackUp>
-        </ActionIcon>
-        <ActionIcon variant="filled" size="xl"  onClick={() => addTimeFunction(1)}>
-          <IconArrowForwardUp style={{ width: '70%', height: '70%' }} stroke={1.5}></IconArrowForwardUp>
-        </ActionIcon>
-        <ActionIcon variant="filled" size="xl"  onClick={() => addTimeFunction(10)} >
-          <IconRewindForward10 style={{ width: '70%', height: '70%' }} stroke={1.5}></IconRewindForward10>
-        </ActionIcon>
-        <ActionIcon variant="filled" size="xl"  onClick={() => addTimeFunction(60)} >
-          <IconRewindForward60 style={{ width: '70%', height: '70%' }} stroke={1.5}></IconRewindForward60>
-        </ActionIcon>
+        <Button variant="gradient" size="lg" onClick={() => fetch("/start")} leftSection={
+          <IconPlayerPlayFilled size={24}></IconPlayerPlayFilled>
+        }>Start</Button>
+        <Button variant="gradient" size="lg" onClick={() => fetch("/stop")} leftSection={
+          <IconPlayerStopFilled size={24}></IconPlayerStopFilled>
+        }>Stop</Button>
+        <Button variant="gradient" size="lg" onClick={() => fetch("/reset")} leftSection={
+          <IconClockHour12 size={24}></IconClockHour12>
+        }>Reset</Button>
 
       </Group>
 
@@ -171,7 +164,13 @@ function App() {
         { info }
       </Notification>}
 
-      <Textarea label="Logs" m={5} value={logs.join('\n')} style={{
+      {/*<TextInput  mx={5} mt={10}
+        label="Client(s) OSC" value={oscclients || ""}  onChange={(evt) =>
+          setOscClients(evt.target.value)
+        }
+      />*/}
+
+      <Textarea label="Logs" mx={5} mt={10} value={logs.join('\n')} style={{
         flexGrow: 1,
         display: "flex",
         flexDirection: "column"
@@ -186,7 +185,7 @@ function App() {
         }
       }}></Textarea>
 
-      <Button m={5} variant="filled" onClick={() => setLogs([])}>Clear logs</Button>
+      <Button m={5} variant="subtle" onClick={() => setLogs([])}>Clear logs</Button>
     </Flex>
   )
 }

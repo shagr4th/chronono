@@ -8,6 +8,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/hypebeast/go-osc/osc"
 )
 
 type ChronoServer struct {
@@ -31,6 +33,8 @@ type ChronoServer struct {
 
 	// Client connections registry
 	clients map[chan []byte]bool
+
+	oscClients map[string]*osc.Client
 }
 
 func makeTimestamp() int64 {
@@ -49,13 +53,13 @@ func fmtDuration(d time.Duration) string {
 // LogPrintf Log
 func (server *ChronoServer) LogPrintf(format string, v ...interface{}) {
 	log.Printf(format, v...)
-	server.broadcast(fmt.Sprintf(format, v...))
+	server.sseBroadcast(fmt.Sprintf(format, v...))
 }
 
 // LogPrint Log
 func (server *ChronoServer) LogPrint(v ...interface{}) {
 	log.Print(v...)
-	server.broadcast(fmt.Sprint(v...))
+	server.sseBroadcast(fmt.Sprint(v...))
 }
 
 func (server *ChronoServer) listen() {
@@ -92,6 +96,7 @@ func NewChronoServer() *ChronoServer {
 		closingClients: make(chan chan []byte),
 		clients:        make(map[chan []byte]bool),
 		oldOffset:      -1,
+		oscClients:     make(map[string]*osc.Client),
 	}
 
 	// Set it running - listening and broadcasting events
@@ -100,7 +105,7 @@ func NewChronoServer() *ChronoServer {
 	return server
 }
 
-func (server *ChronoServer) serverOnRealHTTPProtocol(handler http.Handler) {
+func (server *ChronoServer) startHTTPListener(handler http.Handler) {
 	log.Fatal(http.ListenAndServe(*server.host+":"+*server.port, handler))
 }
 
@@ -150,10 +155,10 @@ func (server *ChronoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		go func() {
 			time.Sleep(200 * time.Millisecond)
-			server.broadcast("http=" + server.getHTTPUrl() +
+			server.sseBroadcast("http=" + server.getHTTPUrl() +
 				", OSC: " + server.getOSCUrl())
-			server.broadcastTime()
-			server.broadcast("New Client ! " + r.RemoteAddr)
+			server.sseBroadcastTime()
+			server.sseBroadcast("New Client ! " + r.RemoteAddr)
 		}()
 
 		for {
@@ -169,17 +174,17 @@ func (server *ChronoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 	} else if r.URL.Path == "/reset" {
-		server.reset(0)
-		server.broadcastTime()
+		server.resetTimer(0)
+		server.sseBroadcastTime()
 	} else if r.URL.Path == "/start" {
-		server.start()
-		server.broadcastTime()
+		server.startTimer()
+		server.sseBroadcastTime()
 	} else if r.URL.Path == "/stop" {
-		server.stop()
-		server.broadcastTime()
+		server.stopTimer()
+		server.sseBroadcastTime()
 	} else if r.URL.Path == "/config" && strings.HasPrefix(r.URL.RawQuery, "clients=") {
 		var s = strings.TrimPrefix(r.URL.RawQuery, "clients=")
-		initOscClients(s)
+		server.oscInitClients(s)
 	} else if r.URL.Path == "/config" && strings.HasPrefix(r.URL.RawQuery, "time=") {
 		var s = strings.TrimPrefix(r.URL.RawQuery, "time=")
 		f, err := strconv.ParseFloat(s, 64)
@@ -192,7 +197,7 @@ func (server *ChronoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		if server.startTime == 0 {
 			server.LogPrintf("Set server time to " + strconv.Itoa(int(i/1000)) + " seconds")
 			server.offset = i
-			server.broadcastTime()
+			server.sseBroadcastTime()
 		}
 	} else {
 		w.WriteHeader(404)
@@ -200,15 +205,15 @@ func (server *ChronoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (server *ChronoServer) broadcast(msg string) {
+func (server *ChronoServer) sseBroadcast(msg string) {
 	server.Notifier <- []byte(msg)
 }
 
-func (server *ChronoServer) broadcastTime() {
-	server.broadcast("time=" + strconv.FormatInt(server.offset, 10))
+func (server *ChronoServer) sseBroadcastTime() {
+	server.sseBroadcast("time=" + strconv.FormatInt(server.offset, 10))
 }
 
-func (server *ChronoServer) reset(newOffsetMilliseconds int64) {
+func (server *ChronoServer) resetTimer(newOffsetMilliseconds int64) {
 	server.LogPrintf("Reset server time to 0 seconds")
 	if server.offset != newOffsetMilliseconds {
 		server.offset = newOffsetMilliseconds
@@ -219,14 +224,14 @@ func (server *ChronoServer) reset(newOffsetMilliseconds int64) {
 	}
 }
 
-func (server *ChronoServer) start() {
+func (server *ChronoServer) startTimer() {
 	if server.startTime == 0 {
 		server.startTime = makeTimestamp() - server.offset
 		log.Print("Clock started")
 	}
 }
 
-func (server *ChronoServer) stop() {
+func (server *ChronoServer) stopTimer() {
 	if server.startTime > 0 {
 		server.startTime = 0
 		log.Print("Clock stopped")
@@ -235,7 +240,7 @@ func (server *ChronoServer) stop() {
 
 func (server *ChronoServer) incrementTime(secondes int64) {
 	if server.startTime == 0 {
-		server.reset(server.offset + secondes*1000)
+		server.resetTimer(server.offset + secondes*1000)
 	}
 }
 
