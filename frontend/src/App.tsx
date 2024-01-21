@@ -95,7 +95,7 @@ function App() {
   }, [])
 
   return (
-    <Flex direction="column" w="100%" h="100%">
+    <Flex direction="column" w="100%" h="100vh">
       <Group justify="end" mt={10} mr={10}>
         <ColorSchemeButton/>
       </Group>

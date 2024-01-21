@@ -4,3 +4,4 @@ node_modules
 .task
 bin
 frontend/dist
+sign.sh
