@@ -94,8 +94,10 @@ function App() {
         <ColorSchemeButton/>
       </Group>
       <Group justify="center" align="center" ref={clockRef} onClick={(evt) => {
-        if (!(evt.target instanceof HTMLInputElement)) {
-          timeEntryHandlers.toggle()
+        if (!timeEntryOpened) {
+          timeEntryHandlers.open()
+        } else if (evt.target == evt.currentTarget) {
+          timeEntryHandlers.close();
         }
       }} style={{
         height: ((Math.min(Math.max(clockWidth, 128), 1024) - 20) / 2) + "px"
