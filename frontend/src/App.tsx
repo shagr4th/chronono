@@ -97,6 +97,8 @@ function App() {
         if (!(evt.target instanceof HTMLInputElement)) {
           timeEntryHandlers.toggle()
         }
+      }} style={{
+        height: ((Math.min(Math.max(clockWidth, 128), 1024) - 20) / 2) + "px"
       }}>
 
         {!timeEntryOpened && <RingProgress size={(Math.min(Math.max(clockWidth, 128), 1024) - 20) / 2} thickness={10} roundCaps m={0}
@@ -112,7 +114,7 @@ function App() {
           width: ((Math.min(Math.max(clockWidth, 128), 1024) - 40) / 2) + "px",
           margin: "5px"
         }}
-          label="Minutes" value={minutes} onChange={(evt) => {
+          label="Minutes" autoFocus={true} value={minutes} onChange={(evt) => {
             const m = typeof evt == "number" ? evt as number : 0
             setMinutes(m)
             setTimeFunction(m * 60 + seconds)

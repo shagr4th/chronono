@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"math"
 	"net"
 	"regexp"
 	"slices"
@@ -106,13 +107,22 @@ func (server *ChronoServer) oscInitClients(clients string, remoteaddr string) er
 }
 
 func (server *ChronoServer) oscBroadcastTime() {
-	for _, oscClient := range server.oscClients {
-		msg := osc.NewMessage("/chronono/minutes")
-		msg.Append(int32(server.offset / 60000))
-		oscClient.Send(msg)
-		msg = osc.NewMessage("/chronono/seconds")
-		msg.Append(int32((server.offset / 1000) % 60))
-		oscClient.Send(msg)
+	oldSeconds := math.Floor(float64(server.oldOffset) / 1000)
+	seconds := math.Floor(float64(server.offset) / 1000)
+
+	if oldSeconds != seconds {
+		for _, oscClient := range server.oscClients {
+			if int32(seconds)/60 != int32(oldSeconds)/60 {
+				msg := osc.NewMessage("/chronono/minutes")
+				msg.Append(int32(server.offset / 60000))
+				oscClient.Send(msg)
+			}
+			if int32(seconds)%60 != int32(oldSeconds)%60 {
+				msg := osc.NewMessage("/chronono/seconds")
+				msg.Append(int32((server.offset / 1000) % 60))
+				oscClient.Send(msg)
+			}
+		}
 	}
 }
 

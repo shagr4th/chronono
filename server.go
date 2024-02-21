@@ -205,9 +205,11 @@ func (server *ChronoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 		if server.startTime == 0 {
 			server.LogPrintf("Set server time to " + strconv.Itoa(int(i/1000)) + " seconds")
+			old := server.offset
 			server.offset = i
 			server.sseBroadcastTime()
 			server.oscBroadcastTime()
+			server.oldOffset = old
 		}
 	} else {
 		server.assetserver.ServeHTTP(w, r)

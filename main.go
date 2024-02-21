@@ -81,15 +81,15 @@ func main() {
 	myClock := clock.NewClock()
 	job, ok := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
 		if server.startTime > 0 {
-			server.sseBroadcastTime()
 			server.offset = makeTimestamp() - server.startTime
+			server.sseBroadcastTime()
+			server.oscBroadcastTime()
 		}
 
 		if math.Floor(float64(server.oldOffset)/1000) != math.Floor(float64(server.offset)/1000) {
 			systray.SetLabel(fmtDuration(time.Duration(server.offset) * time.Millisecond))
-			server.oldOffset = server.offset
-			server.oscBroadcastTime()
 		}
+		server.oldOffset = server.offset
 	})
 	if !ok {
 		log.Println("Fail to start timer")
