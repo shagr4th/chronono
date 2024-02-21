@@ -188,7 +188,8 @@ function App() {
 
       </Group>
 
-      {info && <Notification color={infoInError ? 'red' : 'blue'} title="Information" withCloseButton={false} mt={10}>
+      {info && <Notification color={infoInError ? 'red' : 'blue'} title="Information"
+        withCloseButton={false} mt={10} mih="50px">
         { info }
       </Notification>}
 
