@@ -23,7 +23,7 @@ var icon []byte
 
 func main() {
 
-	var server = NewChronoServer()
+	var server = NewChronoServer(assets)
 
 	server.host = flag.String("h", server.GetLocalIP(), "network host to serve on")
 	server.port = flag.String("p", "8811", "http port to serve on")
@@ -35,7 +35,6 @@ func main() {
 		Icon:        icon,
 		Description: "OSC and HTTP clock control",
 		Assets: application.AssetOptions{
-			FS: assets,
 			Middleware: func(next http.Handler) http.Handler {
 				go server.startHTTPListener(next)
 				return next
@@ -83,13 +82,13 @@ func main() {
 	job, ok := myClock.AddJobRepeat(time.Duration(100*time.Millisecond), 0, func() {
 		if server.startTime > 0 {
 			server.sseBroadcastTime()
-			server.oscBroadcast(server.offset)
 			server.offset = makeTimestamp() - server.startTime
 		}
 
 		if math.Floor(float64(server.oldOffset)/1000) != math.Floor(float64(server.offset)/1000) {
 			systray.SetLabel(fmtDuration(time.Duration(server.offset) * time.Millisecond))
 			server.oldOffset = server.offset
+			server.oscBroadcastTime()
 		}
 	})
 	if !ok {

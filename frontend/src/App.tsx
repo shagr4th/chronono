@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
-import { ActionIcon, Button, Flex, Group, Notification, RingProgress, Text, TextInput, Textarea, useComputedColorScheme, useMantineColorScheme } from '@mantine/core';
+import { ActionIcon, Button, Flex, Group, Notification, NumberInput, RingProgress, Text, TextInput, Textarea, Tooltip, useComputedColorScheme, useMantineColorScheme } from '@mantine/core';
 import { IconPlayerPlayFilled, IconPlayerStopFilled, IconRewindForward60, IconRewindForward10, IconArrowForwardUp,
-  IconRewindBackward60, IconRewindBackward10, IconArrowBackUp, IconClockHour12, IconSun, IconMoonStars } from '@tabler/icons-react'
-import { useResizeObserver } from '@mantine/hooks';
+  IconRewindBackward60, IconRewindBackward10, IconArrowBackUp, IconClockHour12, IconSun, IconMoonStars, IconSend } from '@tabler/icons-react'
+import { useDisclosure, useResizeObserver } from '@mantine/hooks';
 
 
 const ColorSchemeButton = () => {
@@ -32,14 +32,9 @@ function App() {
   const [infoInError, setInfoInError] = useState(false)
   const [time, setTime] = useState(0)
   const [clockRef, { width: clockWidth }] = useResizeObserver<HTMLDivElement>();
-  const logsRef = useRef<string[]>();
 
-  useEffect(() => {
-    logsRef.current = logs;
-  }, [logs]);
-
-  const addTimeFunction = (delta: number) => {
-    var newTime = time + delta;
+  const [timeEntryOpened, timeEntryHandlers] = useDisclosure(false);
+  const setTimeFunction = (newTime: number) => {
     if (newTime < 0) {
       newTime = 0;
     }
@@ -49,7 +44,6 @@ function App() {
   useEffect(() => {
     if (oscclients) {
       localStorage.setItem("oscclients", oscclients);
-      fetch("/config?clients=" + oscclients);
     } else {
       localStorage.removeItem("oscclients")
     }
@@ -59,7 +53,7 @@ function App() {
     var h = Math.floor(time / 3600);
     setHours(h);
     setMinutes(Math.floor((time - h * 3600) / 60));
-    setSeconds(time % 60);
+    setSeconds(Math.floor(time % 60));
   }, [time]);
 
   useEffect(() => {
@@ -81,7 +75,7 @@ function App() {
         setInfo(evt.data.substring(5));
         setInfoInError(false)
       } else {
-        setLogs((logsRef.current ?? []).concat('[' + new Date().toTimeString().substring(0, 8) + '] ' + evt.data))
+        setLogs(logs => logs.concat('[' + new Date().toTimeString().substring(0, 8) + '] ' + evt.data));
       }
     }
     sse.onerror = function (evt) {
@@ -99,48 +93,80 @@ function App() {
       <Group justify="end" mt={10} mr={10}>
         <ColorSchemeButton/>
       </Group>
-      <Group justify="center" ref={clockRef}>
+      <Group justify="center" align="center" ref={clockRef} onClick={(evt) => {
+        if (!(evt.target instanceof HTMLInputElement)) {
+          timeEntryHandlers.toggle()
+        }
+      }}>
 
-      { clockWidth > 100 && <RingProgress size={(clockWidth - 20) / 2} thickness={10} roundCaps m={0}
-          sections={[{ value: 100 * minutes / 60, color: 'blue' }]}
-          label={
-            <Text fz={clockWidth / 5} fw={700} ta="center" size="xl">
-              {('0' + Math.floor(minutes)).slice(-2)}
-            </Text>
-          }
-        />}
+        {!timeEntryOpened && <RingProgress size={(Math.min(Math.max(clockWidth, 128), 1024) - 20) / 2} thickness={10} roundCaps m={0}
+            sections={[{ value: 100 * minutes / 60, color: 'blue' }]}
+            label={
+              <Text fz={Math.min(Math.max(clockWidth, 128), 1024) / 5} fw={700} ta="center" size="xl">
+                {('0' + Math.floor(minutes)).slice(-2)}
+              </Text>
+            }
+          />}
 
-      { clockWidth > 100 && <RingProgress size={(clockWidth - 20) / 2} thickness={10} roundCaps m={0}
-          sections={[{ value: 100 * seconds / 60, color: 'blue' }]}
-          label={
-            <Text fz={clockWidth / 5}  fw={700} ta="center" size="xl">
-              {('0' + Math.floor(seconds)).slice(-2)}
-            </Text>
+        {timeEntryOpened && <NumberInput style={{
+          width: ((Math.min(Math.max(clockWidth, 128), 1024) - 40) / 2) + "px",
+          margin: "5px"
+        }}
+          label="Minutes" value={minutes} onChange={(evt) => {
+            const m = typeof evt == "number" ? evt as number : 0
+            setMinutes(m)
+            setTimeFunction(m * 60 + seconds)
+          }} onKeyDown={(evt) => {
+            if (evt.key === 'Enter') {
+              timeEntryHandlers.close()
+            }
           }
-        />}
+        }></NumberInput>}
+
+        {!timeEntryOpened && <RingProgress size={(Math.min(Math.max(clockWidth, 128), 1024) - 20) / 2} thickness={10} roundCaps m={0}
+            sections={[{ value: 100 * seconds / 60, color: 'blue' }]}
+            label={
+              <Text fz={Math.min(Math.max(clockWidth, 128), 1024) / 5}  fw={700} ta="center" size="xl">
+                {('0' + Math.floor(seconds)).slice(-2)}
+              </Text>
+            }
+          />}
+
+        {timeEntryOpened && <NumberInput style={{
+          width: ((Math.min(Math.max(clockWidth, 128), 1024) - 40) / 2) + "px",
+          margin: "5px"
+        }}
+          label="Seconds" value={seconds} onChange={(evt) => {
+            const s = typeof evt == "number" ? evt as number : 0
+            setSeconds(s)
+            setTimeFunction(minutes * 60 + s)
+          }} onKeyDown={(evt) => {
+            if (evt.key === 'Enter') {
+              timeEntryHandlers.close()
+            }
+          }
+        }></NumberInput>}
 
       </Group>
 
-
-      
       <Group justify="space-around" mt={10}>
 
-        <ActionIcon variant="subtle" size="xl" onClick={() => addTimeFunction(-60)}>
+        <ActionIcon variant="subtle" size="xl" onClick={() => setTimeFunction(time - 60)}>
           <IconRewindBackward60 style={{ width: '70%', height: '70%' }} stroke={1.5}></IconRewindBackward60>
         </ActionIcon>
-        <ActionIcon variant="subtle" size="xl" onClick={() => addTimeFunction(-10)}>
+        <ActionIcon variant="subtle" size="xl" onClick={() => setTimeFunction(time - 10)}>
           <IconRewindBackward10 style={{ width: '70%', height: '70%' }} stroke={1.5}></IconRewindBackward10>
         </ActionIcon>
-        <ActionIcon variant="subtle"  size="xl" onClick={() => addTimeFunction(-1)}>
+        <ActionIcon variant="subtle"  size="xl" onClick={() => setTimeFunction(time - 1)}>
           <IconArrowBackUp style={{ width: '70%', height: '70%' }} stroke={1.5}></IconArrowBackUp>
         </ActionIcon>
-        <ActionIcon variant="subtle" size="xl"  onClick={() => addTimeFunction(1)}>
+        <ActionIcon variant="subtle" size="xl"  onClick={() => setTimeFunction(time + 1)}>
           <IconArrowForwardUp style={{ width: '70%', height: '70%' }} stroke={1.5}></IconArrowForwardUp>
         </ActionIcon>
-        <ActionIcon variant="subtle" size="xl"  onClick={() => addTimeFunction(10)} >
+        <ActionIcon variant="subtle" size="xl"  onClick={() => setTimeFunction(time + 10)} >
           <IconRewindForward10 style={{ width: '70%', height: '70%' }} stroke={1.5}></IconRewindForward10>
         </ActionIcon>
-        <ActionIcon variant="subtle" size="xl"  onClick={() => addTimeFunction(60)} >
+        <ActionIcon variant="subtle" size="xl"  onClick={() => setTimeFunction(time + 60)} >
           <IconRewindForward60 style={{ width: '70%', height: '70%' }} stroke={1.5}></IconRewindForward60>
         </ActionIcon>
 
@@ -164,11 +190,12 @@ function App() {
         { info }
       </Notification>}
 
-      {/*<TextInput  mx={5} mt={10}
-        label="Client(s) OSC" value={oscclients || ""}  onChange={(evt) =>
-          setOscClients(evt.target.value)
+      <TextInput mx={5} mt={10} placeholder='Press enter to save'
+        label="Client(s) OSC" value={oscclients || ""} onChange={(evt) =>
+          setOscClients(evt.currentTarget.value)} onKeyDown={(evt) =>
+            evt.key === 'Enter' && fetch("/config?clients=" + oscclients)
         }
-      />*/}
+      />
 
       <Textarea label="Logs" mx={5} mt={10} value={logs.join('\n')} style={{
         flexGrow: 1,

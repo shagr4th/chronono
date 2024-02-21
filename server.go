@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"fmt"
 	"log"
 	"net"
@@ -10,10 +11,14 @@ import (
 	"time"
 
 	"github.com/hypebeast/go-osc/osc"
+	application "github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type ChronoServer struct {
 	http.Handler
+
+	assetserver http.Handler
+
 	host *string
 	port *string
 	osc  *string
@@ -88,9 +93,10 @@ func (server *ChronoServer) listen() {
 	}
 
 }
-func NewChronoServer() *ChronoServer {
+func NewChronoServer(fs embed.FS) *ChronoServer {
 	// Instantiate a server
 	var server = &ChronoServer{
+		assetserver:    application.AssetFileServerFS(fs),
 		Notifier:       make(chan []byte, 1),
 		newClients:     make(chan chan []byte),
 		closingClients: make(chan chan []byte),
@@ -176,15 +182,18 @@ func (server *ChronoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	} else if r.URL.Path == "/reset" {
 		server.resetTimer(0)
 		server.sseBroadcastTime()
+		server.oscBroadcastTime()
 	} else if r.URL.Path == "/start" {
 		server.startTimer()
 		server.sseBroadcastTime()
+		server.oscBroadcastTime()
 	} else if r.URL.Path == "/stop" {
 		server.stopTimer()
 		server.sseBroadcastTime()
+		server.oscBroadcastTime()
 	} else if r.URL.Path == "/config" && strings.HasPrefix(r.URL.RawQuery, "clients=") {
 		var s = strings.TrimPrefix(r.URL.RawQuery, "clients=")
-		server.oscInitClients(s)
+		server.oscInitClients(s, r.RemoteAddr)
 	} else if r.URL.Path == "/config" && strings.HasPrefix(r.URL.RawQuery, "time=") {
 		var s = strings.TrimPrefix(r.URL.RawQuery, "time=")
 		f, err := strconv.ParseFloat(s, 64)
@@ -198,10 +207,10 @@ func (server *ChronoServer) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			server.LogPrintf("Set server time to " + strconv.Itoa(int(i/1000)) + " seconds")
 			server.offset = i
 			server.sseBroadcastTime()
+			server.oscBroadcastTime()
 		}
 	} else {
-		w.WriteHeader(404)
-		return
+		server.assetserver.ServeHTTP(w, r)
 	}
 }
 

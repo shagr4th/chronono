@@ -4,6 +4,7 @@ import (
 	"log"
 	"net"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -70,10 +71,13 @@ func getTimeSkip(message string) int64 {
 	return skip
 }
 
-func (server *ChronoServer) oscInitClients(clients string) error {
-	// TODO: gérer existant et supprimer anciens
-	for _, oscClient := range strings.Split(clients, ";") {
-		parts := strings.Split(oscClient, ":")
+func (server *ChronoServer) oscInitClients(clients string, remoteaddr string) error {
+	if strings.Contains(remoteaddr, ":") {
+		remoteaddr = remoteaddr[:strings.Index(remoteaddr, ":")]
+	}
+	array := strings.Split(clients, ";")
+	for _, oscClientAddress := range array {
+		parts := strings.Split(oscClientAddress, ":")
 		oscPort := 8765
 		if len(parts) > 1 {
 			port, err := strconv.Atoi(parts[1])
@@ -82,22 +86,32 @@ func (server *ChronoServer) oscInitClients(clients string) error {
 			}
 			oscPort = port
 		}
-		server.oscClients[oscClient] = osc.NewClient(parts[0], oscPort)
-		msg := osc.NewMessage("/chronono/init")
-		msg.Append(true)
-		server.oscClients[oscClient].Send(msg)
-		server.LogPrintf("Init OSC client: %s", oscClient)
+		oscClientAddress = remoteaddr + "," + oscClientAddress
+		_, ok := server.oscClients[oscClientAddress]
+		if !ok {
+			server.oscClients[oscClientAddress] = osc.NewClient(parts[0], oscPort)
+			msg := osc.NewMessage("/chronono/init")
+			msg.Append(true)
+			server.oscClients[oscClientAddress].Send(msg)
+			server.LogPrintf("Init OSC client: %s", oscClientAddress[(len(remoteaddr)+1):])
+		}
+	}
+	for oscClientAddress := range server.oscClients {
+		if strings.HasPrefix(oscClientAddress, remoteaddr) && !slices.Contains(array, oscClientAddress[(len(remoteaddr)+1):]) {
+			server.LogPrintf("Removed OSC client: %s", oscClientAddress[(len(remoteaddr)+1):])
+			delete(server.oscClients, oscClientAddress)
+		}
 	}
 	return nil
 }
 
-func (server *ChronoServer) oscBroadcast(millis int64) {
+func (server *ChronoServer) oscBroadcastTime() {
 	for _, oscClient := range server.oscClients {
-		msg := osc.NewMessage("/osc/minutes")
-		msg.Append(int32(millis / 60000))
+		msg := osc.NewMessage("/chronono/minutes")
+		msg.Append(int32(server.offset / 60000))
 		oscClient.Send(msg)
-		msg = osc.NewMessage("/osc/seconds")
-		msg.Append(int32((millis / 1000) % 60))
+		msg = osc.NewMessage("/chronono/seconds")
+		msg.Append(int32((server.offset / 1000) % 60))
 		oscClient.Send(msg)
 	}
 }
