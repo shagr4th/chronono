@@ -225,13 +225,12 @@ func (server *ChronoServer) sseBroadcastTime() {
 }
 
 func (server *ChronoServer) resetTimer(newOffsetMilliseconds int64) {
-	server.LogPrintf("Reset server time to 0 seconds")
 	if server.offset != newOffsetMilliseconds {
 		server.offset = newOffsetMilliseconds
 		if server.offset < 0 {
 			server.offset = 0
 		}
-		server.LogPrintf("Reset %d", server.offset)
+		server.LogPrintf("Reset server time to %d seconds", server.offset/1000)
 	}
 }
 

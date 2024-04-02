@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 	"math"
 	"net"
@@ -54,7 +55,7 @@ func getTimeSkip(message string) int64 {
 		/decX : décrement de X minutes (si X n'est pas défini, 1 minute par défaut)
 		/incXs : si le message se termine par 's', on gère des secondes et non des minutes
 	*/
-	timeSkipRegex := regexp.MustCompile("/((inc)|(dec))([0-9]*)(s|m)?")
+	timeSkipRegex := regexp.MustCompile("(?:/chronono)?/((inc)|(dec))([0-9]*)(s|m)?")
 	match := timeSkipRegex.FindStringSubmatch(message)
 	skip := int64(0)
 	if len(match) == 6 {
@@ -91,7 +92,7 @@ func (server *ChronoServer) oscInitClients(clients string, remoteaddr string) er
 		_, ok := server.oscClients[oscClientAddress]
 		if !ok {
 			server.oscClients[oscClientAddress] = osc.NewClient(parts[0], oscPort)
-			msg := osc.NewMessage("/chronono/init")
+			msg := osc.NewMessage("/chronono/start")
 			msg.Append(true)
 			server.oscClients[oscClientAddress].Send(msg)
 			server.LogPrintf("Init OSC client: %s", oscClientAddress[(len(remoteaddr)+1):])
@@ -128,15 +129,33 @@ func (server *ChronoServer) oscBroadcastTime() {
 
 func manageOSCMessage(server *ChronoServer, message *osc.Message) {
 	log.Printf("Received OSC message : " + message.String())
-	startMsg, _ := regexp.MatchString("/chronono_start.*(1)|(true)", message.String())
-	stopMsg, _ := regexp.MatchString("/chronono_st(op)|(art.*0)|(art.*false)", message.String())
-	resetMsg, _ := regexp.MatchString("/chronono_reset.*", message.String())
+	startMsg, _ := regexp.MatchString("/chronono(_|/)start.*", message.String())
+	stopMsg, _ := regexp.MatchString("/chronono(_|/)st(op)|(art.*0)|(art.*false)", message.String())
+	resetMsg, _ := regexp.MatchString("/chronono(_|/)reset.*", message.String())
+	minutesMsg, _ := regexp.MatchString("/chronono(_|/)minutes", message.String())
+	secondsMsg, _ := regexp.MatchString("/chronono(_|/)seconds", message.String())
 	if startMsg {
 		server.startTimer()
+		server.sseBroadcastTime()
 	} else if stopMsg {
 		server.stopTimer()
+		server.sseBroadcastTime()
 	} else if resetMsg {
 		server.resetTimer(0)
+		server.sseBroadcastTime()
+	} else if (minutesMsg || secondsMsg) && message.CountArguments() == 1 {
+		newTime := int64(0)
+		s := fmt.Sprintf("%v", message.Arguments[0])
+		newTime, _ = strconv.ParseInt(s, 10, 64)
+		actual := server.offset / 1000
+		if minutesMsg {
+			newTime = newTime*60 + actual%60
+		} else {
+			newTime = newTime + int64(actual/60)*60
+		}
+		server.oldOffset = server.offset
+		server.resetTimer(newTime * 1000)
+		server.sseBroadcastTime()
 	} else {
 		var timeSkip = getTimeSkip(message.Address)
 		if timeSkip != 0 {

@@ -16,6 +16,7 @@ func TestGetTime(t *testing.T) {
 	assertGetTimeSkip("/dummy", 0, t)
 	assertGetTimeSkip("/inc", 60, t)
 	assertGetTimeSkip("/inc10", 600, t)
+	assertGetTimeSkip("/chronono/inc10", 600, t)
 	assertGetTimeSkip("/inc10m", 600, t)
 	assertGetTimeSkip("/inc1", 60, t)
 	assertGetTimeSkip("/inc1s", 1, t)

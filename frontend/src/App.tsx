@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import './App.css'
-import { ActionIcon, Button, Flex, Group, Notification, NumberInput, RingProgress, Text, TextInput, Textarea, Tooltip, useComputedColorScheme, useMantineColorScheme } from '@mantine/core';
+import { ActionIcon, Button, Drawer, Flex, Group, Notification, NumberInput, RingProgress, Text, TextInput, Textarea, Tooltip, useComputedColorScheme, useMantineColorScheme } from '@mantine/core';
 import { IconPlayerPlayFilled, IconPlayerStopFilled, IconRewindForward60, IconRewindForward10, IconArrowForwardUp,
-  IconRewindBackward60, IconRewindBackward10, IconArrowBackUp, IconClockHour12, IconSun, IconMoonStars, IconSend } from '@tabler/icons-react'
+  IconRewindBackward60, IconRewindBackward10, IconArrowBackUp, IconClockHour12, IconSun, IconMoonStars, IconSend, IconHelp } from '@tabler/icons-react'
 import { useDisclosure, useResizeObserver } from '@mantine/hooks';
 
 
@@ -11,9 +11,6 @@ const ColorSchemeButton = () => {
   const computedColorScheme = useComputedColorScheme('dark', { getInitialValueInEffect: true })
 
   return <ActionIcon
-      style={{
-          marginLeft: 'auto'
-      }}
       variant="outline"
       color={computedColorScheme == 'dark' ? 'yellow' : 'blue'}
       onClick={() => setColorScheme(computedColorScheme === 'dark' ? 'light' : 'dark')}
@@ -88,9 +85,45 @@ function App() {
     };
   }, [])
 
+  const [opened, { open, close }] = useDisclosure(false);
+
   return (
+    <>
+    <Drawer.Root opened={opened} onClose={close}>
+      <Drawer.Overlay />
+      <Drawer.Content>
+        <Drawer.Header>
+          <Drawer.Title>Help</Drawer.Title>
+          <Drawer.CloseButton />
+        </Drawer.Header>
+        <Drawer.Body>
+          <h4>Chronono → OSC Client(s):</h4>
+          <ul>
+            <li><b>/chronono/start</b> : Receive start event</li>
+            <li><b>/chronono/minutes</b> : Receive minutes changed event <i>(arg: minutes)</i></li>
+            <li><b>/chronono/seconds</b> : Receive seconds changed event <i>(arg: seconds)</i></li>
+          </ul>
+          <h4>OSC Client(s) → Chronono</h4>
+          <ul>
+            <li><b>/chronono/start</b> : Send start event</li>
+            <li><b>/chronono/stop</b> : Send stop event</li>
+            <li><b>/chronono/reset</b> : Send reset event</li>
+            <li><b>/chronono/minutes</b> : Send new time event (<i>arg: minutes)</i></li>
+            <li><b>/chronono/seconds</b> : Send new time event (<i>arg: seconds)</i></li>
+            <li><b>/chronono/incXX</b> : Send timer increment event (<i>XX : 10s, or 10m</i>)</li>
+            <li><b>/chronono/decXX</b> : Send timer decrement event (<i>XX : 10s, or 10m</i>)</li>
+          </ul>
+        </Drawer.Body>
+      </Drawer.Content>
+    </Drawer.Root>
     <Flex direction="column" w="100%" h="100vh">
-      <Group justify="end" mt={10} mr={10}>
+      <Group justify="flex-end" mt={10} mr={10}>
+        <ActionIcon
+            variant="filled"
+            onClick={open}
+            title="Toggle color scheme"
+        ><IconHelp size="1.0rem" />
+        </ActionIcon>
         <ColorSchemeButton/>
       </Group>
       <Group justify="center" align="center" ref={clockRef} onClick={(evt) => {
@@ -219,6 +252,7 @@ function App() {
 
       <Button m={5} variant="subtle" onClick={() => setLogs([])}>Clear logs</Button>
     </Flex>
+    </>
   )
 }
 
