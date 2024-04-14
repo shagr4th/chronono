@@ -248,12 +248,6 @@ func (server *ChronoServer) stopTimer() {
 	}
 }
 
-func (server *ChronoServer) incrementTime(secondes int64) {
-	if server.startTime == 0 {
-		server.resetTimer(server.offset + secondes*1000)
-	}
-}
-
 // GetLocalIP returns the non loopback local IP of the host
 func (server *ChronoServer) GetLocalIP() string {
 	addrs, err := net.InterfaceAddrs()

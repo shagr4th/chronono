@@ -158,8 +158,8 @@ func manageOSCMessage(server *ChronoServer, message *osc.Message) {
 		server.sseBroadcastTime()
 	} else {
 		var timeSkip = getTimeSkip(message.Address)
-		if timeSkip != 0 {
-			server.incrementTime(timeSkip)
+		if timeSkip != 0 && server.startTime == 0 {
+			server.resetTimer(server.offset + timeSkip*1000)
 			server.sseBroadcastTime()
 		}
 	}
