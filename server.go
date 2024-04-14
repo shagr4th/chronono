@@ -237,14 +237,14 @@ func (server *ChronoServer) resetTimer(newOffsetMilliseconds int64) {
 func (server *ChronoServer) startTimer() {
 	if server.startTime == 0 {
 		server.startTime = makeTimestamp() - server.offset
-		log.Print("Clock started")
+		server.LogPrint("Stopwatch started")
 	}
 }
 
 func (server *ChronoServer) stopTimer() {
 	if server.startTime > 0 {
 		server.startTime = 0
-		log.Print("Clock stopped")
+		server.LogPrint("Stopwatch stopped")
 	}
 }
 
