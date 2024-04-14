@@ -160,6 +160,7 @@ func manageOSCMessage(server *ChronoServer, message *osc.Message) {
 		var timeSkip = getTimeSkip(message.Address)
 		if timeSkip != 0 {
 			server.incrementTime(timeSkip)
+			server.sseBroadcastTime()
 		}
 	}
 }
