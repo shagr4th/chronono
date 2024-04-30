@@ -7,7 +7,7 @@ toolchain go1.21.6
 require (
 	github.com/alex023/clock v0.0.0-20191208111215-c265f1b2ab18
 	github.com/hypebeast/go-osc v0.0.0-20220308234300-cec5a8a1e5f5
-	github.com/wailsapp/wails/v3 v3.0.0-alpha.3
+	github.com/wailsapp/wails/v3 v3.0.0-alpha.4.0.20240221124032-12d12a33dec1
 )
 
 require (
@@ -52,5 +52,3 @@ require (
 	golang.org/x/tools v0.17.0 // indirect
 	gopkg.in/warnings.v0 v0.1.2 // indirect
 )
-
-replace github.com/wailsapp/wails/v3 => ../wails/v3
