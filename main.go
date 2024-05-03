@@ -33,7 +33,7 @@ func main() {
 		Name:        "Chronono",
 		LogLevel:    slog.LevelInfo,
 		Icon:        icon,
-		Description: "OSC and HTTP clock control / v2.2",
+		Description: "OSC and HTTP clock control / v2.3",
 		Assets: application.AssetOptions{
 			Middleware: func(next http.Handler) http.Handler {
 				go server.startHTTPListener(next)

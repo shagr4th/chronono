@@ -130,15 +130,15 @@ func (server *ChronoServer) oscBroadcastTime() {
 func manageOSCMessage(server *ChronoServer, message *osc.Message) {
 	log.Printf("Received OSC message : " + message.String())
 	startMsg, _ := regexp.MatchString("/chronono(_|/)start.*", message.String())
-	stopMsg, _ := regexp.MatchString("/chronono(_|/)st(op)|(art.*0)|(art.*false)", message.String())
+	stopMsg, _ := regexp.MatchString("/chronono(_|/)st((op)|(art.*0)|(art.*false))", message.String())
 	resetMsg, _ := regexp.MatchString("/chronono(_|/)reset.*", message.String())
 	minutesMsg, _ := regexp.MatchString("/chronono(_|/)minutes", message.String())
 	secondsMsg, _ := regexp.MatchString("/chronono(_|/)seconds", message.String())
-	if startMsg {
-		server.startTimer()
-		server.sseBroadcastTime()
-	} else if stopMsg {
+	if stopMsg {
 		server.stopTimer()
+		server.sseBroadcastTime()
+	} else if startMsg {
+		server.startTimer()
 		server.sseBroadcastTime()
 	} else if resetMsg {
 		server.resetTimer(0)
@@ -153,7 +153,6 @@ func manageOSCMessage(server *ChronoServer, message *osc.Message) {
 		} else {
 			newTime = newTime + int64(actual/60)*60
 		}
-		server.oldOffset = server.offset
 		server.resetTimer(newTime * 1000)
 		server.sseBroadcastTime()
 	} else {
