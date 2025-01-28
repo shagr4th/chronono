@@ -28,7 +28,7 @@ func (server *ChronoServer) oscServe() {
 	for {
 		packet, err := oscServer.ReceivePacket(conn)
 		if err != nil {
-			log.Printf("OSC Server error: " + err.Error())
+			log.Printf("OSC Server error: %s", err.Error())
 		}
 
 		if packet != nil {
@@ -128,7 +128,7 @@ func (server *ChronoServer) oscBroadcastTime() {
 }
 
 func manageOSCMessage(server *ChronoServer, message *osc.Message) {
-	log.Printf("Received OSC message : " + message.String())
+	log.Printf("Received OSC message : %s", message.String())
 	startMsg, _ := regexp.MatchString("/chronono(_|/)start.*", message.String())
 	stopMsg, _ := regexp.MatchString("/chronono(_|/)st((op)|(art.*0)|(art.*false))", message.String())
 	resetMsg, _ := regexp.MatchString("/chronono(_|/)reset.*", message.String())

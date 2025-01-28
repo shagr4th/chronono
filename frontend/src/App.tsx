@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from 'react'
-import './App.css'
-import { ActionIcon, Button, Drawer, Flex, Group, Notification, NumberInput, RingProgress, Text, TextInput, Textarea, Tooltip, useComputedColorScheme, useMantineColorScheme } from '@mantine/core';
-import { IconPlayerPlayFilled, IconPlayerStopFilled, IconRewindForward60, IconRewindForward10, IconArrowForwardUp,
-  IconRewindBackward60, IconRewindBackward10, IconArrowBackUp, IconClockHour12, IconSun, IconMoonStars, IconSend, IconHelp } from '@tabler/icons-react'
+import { RefObject, useEffect, useState } from 'react';
+import './App.css';
+import { ActionIcon, Button, Drawer, Flex, Group, Notification, NumberInput, RingProgress, Text, TextInput, Textarea, useComputedColorScheme, useMantineColorScheme } from '@mantine/core';
+import {
+  IconPlayerPlayFilled, IconPlayerStopFilled, IconRewindForward60, IconRewindForward10, IconArrowForwardUp,
+  IconRewindBackward60, IconRewindBackward10, IconArrowBackUp, IconClockHour12, IconSun, IconMoonStars, IconHelp
+} from '@tabler/icons-react';
 import { useDisclosure, useResizeObserver } from '@mantine/hooks';
 
 
@@ -126,7 +128,7 @@ function App() {
         </ActionIcon>
         <ColorSchemeButton/>
       </Group>
-      <Group justify="center" align="center" ref={clockRef} onClick={(evt) => {
+      <Group justify="center" align="center" ref={clockRef as RefObject<HTMLDivElement>} onClick={(evt) => {
         if (!timeEntryOpened) {
           timeEntryHandlers.open()
         } else if (evt.target == evt.currentTarget) {
